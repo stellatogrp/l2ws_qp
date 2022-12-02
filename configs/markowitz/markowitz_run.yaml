@@ -1,0 +1,33 @@
+nn_cfg:
+  lr: 1e-5 
+  method: adam
+  intermediate_layer_sizes: [500, 500, 500]
+  batch_size: 50
+  epochs: 500
+  decay_lr: .6
+  min_lr: 1e-7
+  decay_every: 5000
+
+pretrain:
+  pretrain_method: adam
+  pretrain_stepsize: .001
+  pretrain_iters: 2
+
+data:
+  datetime: 2022-11-28/19-34-47
+  #path: outputs/aggregate_outputs/2022-10-14/13-46-58/data_setup_aggregate
+  #outputs/aggregate_outputs/2022-10-14/10-13-43/data_setup_aggregate
+  # outputs/aggregate_outputs/2022-10-13/13-15-49/data_setup_aggregate
+  #outputs/2022-10-12/21-14-25/data_setup_aggregate
+  #outputs/2022-10-10/23-29-22/data_setup_aggregate
+  #outputs/2022-10-11/13-32-25/data_setup_aggregate
+  #outputs/2022-10-10/23-29-22/data_setup_aggregate
+
+a: 3000
+train_unrolls: 5
+eval_unrolls: 1000
+eval_every_x_epochs: 3
+N_train: 10000 #10000
+N_test: 1000 #1000
+num_samples: 900
+prediction_variable: w

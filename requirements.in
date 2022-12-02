@@ -1,0 +1,12 @@
+numpy
+scipy
+cvxpy
+matplotlib
+sklearn
+scikit-learn
+pandas
+jax
+jaxlib
+jaxopt
+hydra-core
+optax
