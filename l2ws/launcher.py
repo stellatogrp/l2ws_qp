@@ -88,12 +88,8 @@ class Workspace:
             dynamic_algo_factors, M_tensor = None, None
             M_tensor_train, M_tensor_test = None, None
             matrix_invs_train, matrix_invs_test = None, None
-            # matrix_invs = None
 
             M_plus_I = static_M + jnp.eye(n + m)
-            M_plus_I_inv = jnp.linalg.inv(M_plus_I)
-            print('M_plus_I_inv', M_plus_I_inv)
-            # static_algo_factor = M_plus_I_inv
             static_algo_factor = jsp.linalg.lu_factor(M_plus_I)
         else:
             # load the algo_factors -- check if factor or inverse
@@ -150,13 +146,6 @@ class Workspace:
                 return factor_ @ rhs
         self.lin_sys_solve = lin_sys_solve
 
-        # A = -M[n:, :n]
-        # ATA = A.T @ A
-        # t0 = time.time()
-        # ATA_inv = jnp.linalg.inv(ATA)
-        # t1 = time.time()
-        # print(f"inversion took {t1 - t0} seconds")
-
         # normalize the inputs
         col_sums = thetas.mean(axis=0)
         inputs_normalized = (thetas - col_sums) / thetas.std(axis=0)
@@ -207,7 +196,7 @@ class Workspace:
                       #   'dynamic_algo_factors': matrix_invs,
                       }
 
-        self.l2a_model = L2Amodel(input_dict)
+        self.l2ws_model = L2WSmodel(input_dict)
 
     def _init_logging(self):
         self.logf = open('log.csv', 'a')
@@ -219,23 +208,27 @@ class Workspace:
     def evaluate_iters(self, num, col, train=False, plot=True, plot_pretrain=False):
         fixed_ws = col == 'fixed_ws'
         if train:
-            if self.l2a_model.static_flag:
-                eval_out = self.l2a_model.evaluate(self.eval_unrolls,
-                                                   self.l2a_model.train_inputs[:num, :],
-                                                   self.l2a_model.q_mat_train[:num, :],
+            if self.l2ws_model.static_flag:
+                eval_out = self.l2ws_model.evaluate(self.eval_unrolls,
+                                                   self.l2ws_model.train_inputs[:num, :],
+                                                   self.l2ws_model.q_mat_train[:num, :],
                                                    tag='train')
             else:
-                eval_out = self.l2a_model.dynamic_eval(self.eval_unrolls,
-                                                   self.l2a_model.train_inputs[:num, :],
-                                                   self.l2a_model.matrix_invs_train[:num, :],
-                                                   self.l2a_model.M_tensor_train[:num, :],
-                                                   self.l2a_model.q_mat_train[:num, :],
+                eval_out = self.l2ws_model.dynamic_eval(self.eval_unrolls,
+                                                   self.l2ws_model.train_inputs[:num, :],
+                                                   self.l2ws_model.matrix_invs_train[:num, :],
+                                                   self.l2ws_model.M_tensor_train[:num, :],
+                                                   self.l2ws_model.q_mat_train[:num, :],
                                                    tag='train')
         else:
             if fixed_ws:
-                # find closest train point
-                # distances = distance_matrix(np.array(scaled_test), np.array(scaled_train))
-                distances = distance_matrix(np.array(self.l2a_model.test_inputs[:num,:]), np.array(self.l2a_model.train_inputs))
+                '''
+                find closest train point
+                neural network input
+                '''
+
+                # compute distances to train inputs
+                distances = distance_matrix(np.array(self.l2ws_model.test_inputs[:num,:]), np.array(self.l2ws_model.train_inputs))
                 print('distances', distances)
                 indices = np.argmin(distances, axis=1)
                 print('indices', indices)
@@ -245,50 +238,36 @@ class Workspace:
                 plt.savefig(f"indices_plot.pdf", bbox_inches='tight')
                 plt.clf()
                 
-                inputs = self.l2a_model.w_stars_train[indices, :]
-                # inputs = self.l2a_model.w_stars_test[1:num+1, :]
+                inputs = self.l2ws_model.w_stars_train[indices, :]
+
                 
             elif col == 'no_train':
-                _, predict_size = self.l2a_model.w_stars_test.shape
+                # random init with neural network
+                _, predict_size = self.l2ws_model.w_stars_test.shape
                 random_start = 10*np.random.normal(size=(num, predict_size))
                 inputs = jnp.array(random_start)
                 fixed_ws = True
-                # inputs = self.l2a_model.test_inputs[:num, :]
+
+                # 
+                # inputs = self.l2ws_model.test_inputs[:num, :]
                 # fixed_ws = False
             else:
-                inputs = self.l2a_model.test_inputs[:num, :]
-            if self.l2a_model.static_flag:
-                eval_out = self.l2a_model.evaluate(self.eval_unrolls,
-                                               #self.l2a_model.test_inputs[:num, :],
+                inputs = self.l2ws_model.test_inputs[:num, :]
+            if self.l2ws_model.static_flag:
+                eval_out = self.l2ws_model.evaluate(self.eval_unrolls,
                                                inputs,
-                                               self.l2a_model.q_mat_test[:num, :],
+                                               self.l2ws_model.q_mat_test[:num, :],
                                                tag='test',
                                                fixed_ws=fixed_ws)
             else:
-                
-                eval_out = self.l2a_model.dynamic_eval(self.eval_unrolls,
+                eval_out = self.l2ws_model.dynamic_eval(self.eval_unrolls,
                                                 inputs,
-                                                self.l2a_model.matrix_invs_test[:num, :, :],
-                                                self.l2a_model.M_tensor_test[:num, :, :],
-                                                self.l2a_model.q_mat_test[:num, :],
+                                                self.l2ws_model.matrix_invs_test[:num, :, :],
+                                                self.l2ws_model.M_tensor_test[:num, :, :],
+                                                self.l2ws_model.q_mat_test[:num, :],
                                                 tag='test',
                                                 fixed_ws=fixed_ws)
-                # if fixed_ws:
-                #     eval_out = self.l2a_model.dynamic_eval(self.eval_unrolls,
-                #                                 self.l2a_model.test_inputs[1:num+1, :],
-                #                                 self.l2a_model.matrix_invs_test[:num, :],
-                #                                 self.l2a_model.M_tensor_test[:num, :],
-                #                                 self.l2a_model.q_mat_test[:num, :],
-                #                                 tag='test',
-                #                                 fixed_ws=fixed_ws)
-                # else:
-                #     eval_out = self.l2a_model.dynamic_eval(self.eval_unrolls,
-                #                                 self.l2a_model.test_inputs[:num, :],
-                #                                 self.l2a_model.matrix_invs_test[:num, :],
-                #                                 self.l2a_model.M_tensor_test[:num, :],
-                #                                 self.l2a_model.q_mat_test[:num, :],
-                #                                 tag='test',
-                #                                 fixed_ws=fixed_ws)
+                
         loss_train, out_train, train_time = eval_out
         iter_losses_mean = out_train[2].mean(axis=0)
         plt.plot(out_train[2])
@@ -297,16 +276,14 @@ class Workspace:
         primal_residuals = out_train[3].mean(axis=0)
         dual_residuals = out_train[4].mean(axis=0)
         print('after iterations z', out_train[0][1][0,:])
-        print('truth z', self.l2a_model.w_stars_test[0, :])
+        print('truth z', self.l2ws_model.w_stars_test[0, :])
         print('after iterations z', out_train[0][1][1,:])
-        print('truth z', self.l2a_model.w_stars_test[1, :])
+        print('truth z', self.l2ws_model.w_stars_test[1, :])
         # plt.plot(out_train[0][1][0,:], label='after iters')
-        # plt.plot(self.l2a_model.w_stars_test[0, :], label='truth')
-        plt.plot(self.l2a_model.w_stars_test[0, :] - out_train[0][1][0,:], label='truth')
+        # plt.plot(self.l2ws_model.w_stars_test[0, :], label='truth')
+        plt.plot(self.l2ws_model.w_stars_test[0, :] - out_train[0][1][0,:], label='truth')
         plt.savefig('debug.pdf', bbox_inches='tight')
         plt.clf()
-        # return
-        # pdb.set_trace()
 
         if not train:
             self.iters_df[col] = iter_losses_mean
@@ -394,7 +371,7 @@ class Workspace:
         print("Pretraining...")
         self.df_pretrain = pd.DataFrame(
             columns=['pretrain_loss', 'pretrain_test_loss'])
-        train_pretrain_losses, test_pretrain_losses = self.l2a_model.pretrain(self.pretrain_cfg.pretrain_iters,
+        train_pretrain_losses, test_pretrain_losses = self.l2ws_model.pretrain(self.pretrain_cfg.pretrain_iters,
                                                                               stepsize=self.pretrain_cfg.pretrain_stepsize,
                                                                               df_pretrain=self.df_pretrain)
         plt.plot(train_pretrain_losses, label='train')
@@ -406,14 +383,6 @@ class Workspace:
         plt.savefig('pretrain_losses.pdf')
         plt.clf()
 
-        # out_train_pretrain = self.evaluate_iters(
-        #     5,#self.num_samples,
-        #     'pretrain', train=False)
-        # now save x_primals for 10 problems
-        # jnp.savez('x_primals.npz',
-        #           no_train=out_train_start[0][3],
-        #           pretrain=out_train_pretrain[0][3])
-
         self.logf = open('train_results.csv', 'a')
         fieldnames = ['iter', 'train_loss', 'moving_avg_train', 'test_loss']
         self.writer = csv.DictWriter(self.logf, fieldnames=fieldnames)
@@ -422,71 +391,40 @@ class Workspace:
 
         out_trains = []
 
-        # for train data
-        # out_train_pretrain = self.evaluate_iters(
-        #     self.num_samples, 'pretrain', train=True)
-        # out_train_pretrain_train = self.evaluate_iters(
-        #     5, #self.num_samples,
-        #     'pretrain', train=True)
-
-        '''
-        OLD WAY - train_epoch
-        '''
-        # for i in range(self.l2a_model.epochs):
-        #     self.l2a_model.train_epoch(writer=self.writer, logf=self.logf)
-        #     out_train = self.evaluate_iters(
-        #         self.num_samples, f"epoch {i}", train=False)
-        #     out_trains.append(out_train)
         '''
         NEW WAY - train_batch - better for saving
         '''
         curr_iter = 0
-        for epoch in range(self.l2a_model.epochs):
+        for epoch in range(self.l2ws_model.epochs):
 
             key = random.PRNGKey(epoch)
-            permutation = jax.random.permutation(key, self.l2a_model.N_train)
-            for batch in range(self.l2a_model.num_batches):
-                start_index = batch*self.l2a_model.batch_size
-                end_index = (batch+1)*self.l2a_model.batch_size
+            permutation = jax.random.permutation(key, self.l2ws_model.N_train)
+            for batch in range(self.l2ws_model.num_batches):
+                start_index = batch*self.l2ws_model.batch_size
+                end_index = (batch+1)*self.l2ws_model.batch_size
                 batch_indices = permutation[start_index:end_index]
 
-                # if batch == 0 and epoch > 0:
-                #     decay_lr_flag = True
-                # else:
-                #     decay_lr_flag = False
                 if epoch % self.nn_cfg.decay_every == 0 and epoch > 0:
                     decay_lr_flag = True
                 else:
                     decay_lr_flag = False
-                self.l2a_model.train_batch(
+                self.l2ws_model.train_batch(
                     batch_indices, decay_lr_flag=decay_lr_flag,
                     writer=self.writer, logf=self.logf)
 
-                '''
-                evaluate the test set after every 10 batches
-                '''
-                # if batch % 10 == 0:
-                #     out_train = self.evaluate_iters(
-                #         self.num_samples, f"train_iter_{curr_iter}", train=False)
-                #     out_trains.append(out_train)
-
-                # jnp.savez('x_primals.npz',
-                #           no_train=out_train_start[0][3],
-                #           pretrain=out_train_pretrain[0][3],
-                #           final=out_train[0][3])
                 curr_iter += 1
             if epoch % self.eval_every_x_epochs == 0:
                 out_train = self.evaluate_iters(
                     self.num_samples, f"train_iter_{curr_iter}", train=False)
                 # out_trains.append(out_train)
-            self.l2a_model.epoch += 1
+            self.l2ws_model.epoch += 1
 
             # plot the train / test loss so far
-            batch_losses = np.array(self.l2a_model.tr_losses_batch)
-            te_losses = np.array(self.l2a_model.te_losses)
+            batch_losses = np.array(self.l2ws_model.tr_losses_batch)
+            te_losses = np.array(self.l2ws_model.te_losses)
             num_data_points = batch_losses.size
             epoch_axis = np.arange(num_data_points) / \
-                self.l2a_model.num_batches
+                self.l2ws_model.num_batches
             plt.plot(epoch_axis, batch_losses, label='train')
             plt.plot(epoch_axis, te_losses, label='test')
             plt.yscale('log')
@@ -494,5 +432,4 @@ class Workspace:
             plt.ylabel('fixed point residual average')
             plt.legend()
             plt.savefig('losses_over_training.pdf', bbox_inches='tight')
-            # plt.show()
             plt.clf()

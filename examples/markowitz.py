@@ -61,7 +61,7 @@ def run(run_cfg):
             print(exc)
             setup_cfg = {}
 
-    pen_ret = 10**setup_cfg['prob_setup']['pen_rets_min']
+    pen_ret = 10**setup_cfg['pen_rets_min']
     def get_q(theta):
         q = jnp.zeros(2*a + 1)
         q = q.at[:a].set(-theta * pen_ret)
@@ -81,13 +81,13 @@ def setup_probs(setup_cfg):
     print('entered convex markowitz', flush=True)
     cfg = setup_cfg
 
-    a = cfg.prob_setup.a
-    N_train, N_test = cfg.prob_setup.N_train, cfg.prob_setup.N_test
+    a = cfg.a
+    N_train, N_test = cfg.N_train, cfg.N_test
     N = N_train + N_test
-    mult_factor, std_mult = cfg.prob_setup.mult_factor, cfg.prob_setup.std_mult
-    pen_rets_min = cfg.prob_setup.pen_rets_min
-    pen_rets_max = cfg.prob_setup.pen_rets_max
-    max_clip, min_clip = cfg.prob_setup.max_clip, cfg.prob_setup.min_clip
+    std_mult = cfg.std_mult
+    pen_rets_min = cfg.pen_rets_min
+    pen_rets_max = cfg.pen_rets_max
+    max_clip, min_clip = cfg.max_clip, cfg.min_clip
 
     # p is the size of each feature vector (mu and pen_rets_factor)
     if pen_rets_max > pen_rets_min:
@@ -100,11 +100,8 @@ def setup_probs(setup_cfg):
     orig_cwd = hydra.utils.get_original_cwd()
     ret_cov_np = f"{orig_cwd}/data/portfolio_data/ret_cov.npz"
     ret_cov_loaded = np.load(ret_cov_np)
-    # Sigma = ret_cov_loaded['cov'][:a, :a] + 1e-6 * np.eye(a)
+
     ret = ret_cov_loaded['ret'][:, :a]
-    # Sigma = Sigma * mult_factor
-    # ret = ret * mult_factor
-    # Sigma = Sigma * SCALE_FACTOR
     ret = ret * SCALE_FACTOR
 
     ret_mean = ret.mean(axis=0)
@@ -116,9 +113,10 @@ def setup_probs(setup_cfg):
     t1 = time.time()
     log.info(f"finished static canonicalization - took {t1-t0} seconds")
 
-    Sigma, M = out_dict['Sigma'], out_dict['M']
-    ATA_factor, algo_factor = out_dict['ATA_factor'], out_dict['algo_factor']
-    cones_array, A_sparse = out_dict['cones_array'], out_dict['A_sparse']
+    # Sigma, M = out_dict['Sigma'], out_dict['M']
+    # ATA_factor, algo_factor = out_dict['ATA_factor'], out_dict['algo_factor']
+    # cones_array = out_dict['cones_array']
+    A_sparse = out_dict['A_sparse']
     A_sparse, P_sparse = out_dict['A_sparse'], out_dict['P_sparse']
     b = out_dict['b']
     n = a
@@ -141,7 +139,8 @@ def setup_probs(setup_cfg):
     blank_b = np.zeros(m)
     blank_c = np.zeros(n)
     data = dict(P=P_sparse, A=A_sparse, b=blank_b, c=blank_c)
-    solver = scs.SCS(data, cones_dict, eps_abs=1e-3, eps_rel=1e-3)
+    tol = cfg.solve_acc
+    solver = scs.SCS(data, cones_dict, eps_abs=tol, eps_rel=tol)
     solve_times = np.zeros(N)
     x_stars = jnp.zeros((N, n))
     y_stars = jnp.zeros((N, m))
@@ -151,7 +150,6 @@ def setup_probs(setup_cfg):
     pen_rets = np.zeros(N)
     scs_instances = []
     for i in range(N):
-        # print('problem number i', i)
         log.info(f"solving problem number {i}")
         mu_mat[i, :] = clipped_ret_mean * \
             (1 + std_mult*np.random.normal(size=(a))
@@ -206,11 +204,9 @@ def setup_probs(setup_cfg):
               thetas=thetas,
               x_stars=x_stars,
               y_stars=y_stars,
-              s_stars=s_stars,
+            #   s_stars=s_stars,
               #q_mat=q_mat,
               )
-    # print(f"finished saving final data... took {save_time-t0}'", flush=True)
-    # blank = 0
     save_time = time.time()
     log.info(f"finished saving final data... took {save_time-t0}'")
 

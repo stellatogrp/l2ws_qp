@@ -1,5 +1,6 @@
 import os
 import yaml
+import hydra
 
 def recover_last_datetime(orig_cwd, example, stage):
     '''

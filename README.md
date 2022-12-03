@@ -53,6 +53,17 @@ python l2ws_train.py vehicle local
 python plot_script.py vehicle local
 ```
 Markowitz:
+To get the data, from NASDAQ you must create an account with NASDAQ (https://data.nasdaq.com/) and download the data with 
+```
+https://data.nasdaq.com/tables/WIKI-PRICES/export?api_key={INSERT_API_KEY}[…]date&qopts.columns%5B%5D=ticker&qopts.columns%5B%5D=adj_close
+```
+
+We use the WIKIPRICES dataset found at https://data.nasdaq.com/databases/WIKIP/documentation. To process the data run
+```
+python utils/portfolio_utils.py
+```
+
+To run our experiment run
 ```
 python l2ws_setup.py markowitz local
 python aggregate_slurm_runs_script.py markowitz local

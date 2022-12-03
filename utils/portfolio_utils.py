@@ -7,14 +7,14 @@ import pdb
 import datetime as dt
 import os
 import time
-quandl.ApiConfig.api_key = os.environ['QUANDL_API_KEY']
+# quandl.ApiConfig.api_key = os.environ['QUANDL_API_KEY']
 
 
 def main():
     new()
 
 def new():
-    stacked_filename = 'data/portfolio_data/WIKI_prices_all2.csv'
+    stacked_filename = 'data/portfolio_data/WIKI_prices_all.csv'
     stacked_df = pd.read_csv(stacked_filename)
 
     # create a new dataframe with 'date' column as index
@@ -28,15 +28,7 @@ def new():
 
     clean_data_shorter = clean_data.iloc[2300:, :]
 
-    # pdb.set_trace()
-
     # fill in missing entries
-    # N_assets, N_dates = clean_data.shape
-    # new_df = clean_data.copy()
-    # isna = clean_data.isna()
-    # for i in range(N_assets):
-    #     # check if first entry is nan
-    #     if isna.iloc[i, 0]:
     ret = clean_data_shorter.diff() / clean_data_shorter
     ret = ret.fillna(ret.mean())
 
@@ -51,7 +43,6 @@ def new():
     filename = 'data/portfolio_data/ret_cov.npz'
     np.savez(filename, ret=short_ret_np, cov=cov_np)
     
-    pdb.set_trace()
 
 def old():
     '''

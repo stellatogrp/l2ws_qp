@@ -14,16 +14,12 @@ pretrain:
   pretrain_iters: 2
 
 data:
-  datetime: 2022-11-24/10-18-39
-  #2022-11-22/08-46-23
-  #2022-11-21/22-07-03
-  #2022-11-14/15-39-12
-  #2022-11-15/20-09-55
+  datetime: ''
 
 train_unrolls: 15
 eval_unrolls: 2500
-eval_every_x_epochs: 5
-N_train: 10000
-N_test: 1000
-num_samples: 900
+eval_every_x_epochs: 40
+N_train: 100
+N_test: 20
+num_samples: 3
 prediction_variable: w

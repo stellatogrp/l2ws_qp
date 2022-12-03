@@ -14,31 +14,12 @@ pretrain:
   pretrain_iters: 2
 
 data:
-  datetime: 2022-11-30/15-44-04 #2022-11-30/18-16-50
-    #2022-11-30/15-44-04
-    #2022-11-24/10-00-03
-  #2022-11-04/08-57-34
-  #2022-11-06/16-04-25 w/out cluster 
-  #2022-11-06/11-20-25 w/ cluster 
-
-  #2022-11-05/21-15-31 #w states cluster
-  #2022-11-05/18-39-30 #w/out states cluster
-
-  #2022-11-04/09-23-59 #w/out states cluster
-  #2022-11-04/09-21-29 #w/ states cluster
-  #2022-11-04/09-23-59 #w/out states cluster
-  
-  #2022-11-04/08-57-34 local
-  #2022-11-04/08-46-49 local
-  #2022-10-29/15-42-10 # for cluster
-
+  datetime: ''
 
 train_unrolls: 15
 eval_unrolls: 1500
 eval_every_x_epochs: 3
-# get the following from the data cfg
-#a: 3000
-N_train: 4000
-N_test: 1000
-num_samples: 500
+N_train: 100
+N_test: 20
+num_samples: 3
 prediction_variable: w

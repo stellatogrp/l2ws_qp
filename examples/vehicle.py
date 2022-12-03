@@ -93,10 +93,9 @@ def setup_probs(cfg):
     x_stars = jnp.zeros((N, n))
     y_stars = jnp.zeros((N, m))
     s_stars = jnp.zeros((N, m))
-    # q_mat = jnp.zeros((N, m+n))
-    # data = dict(P=P_sparse, A=A_sparse, b=b, c=c)
-    tol = 1e-8
-    # solver = scs.SCS(data, cones_dict, eps_abs=tol, eps_rel=tol)
+
+    tol = cfg.solve_acc
+
     scs_instances = []
     cones_array_np = np.array(static_dict['cones_array'])
     cones_dict = dict(z=int(cones_array_np[0]), l=int(cones_array_np[1]))
@@ -131,18 +130,10 @@ def setup_probs(cfg):
         factor (M + I) or take inverse for l2ws use
         '''
         M_I = M_tensor[i, :, :] + jnp.eye(m + n)
-        if cfg.linear_system_solve == 'inverse':
-            pass
-            # t0 = time.time()
-            # mat_inv = jnp.linalg.inv(M_I)
-            # t1 = time.time()
-            # print('mat inv time', t1 - t0)
-            # pdb.set_trace()
-            # matrix_invs = matrix_invs.at[i, :, :].set(mat_inv)
-        elif cfg.linear_system_solve == 'factor':
-            factor1, factor2 = jsp.linalg.lu_factor(M_I)
-            factor1s = factor1s.at[i, :, :].set(factor1)
-            factor2s = factor2s.at[i, :, :].set(factor2)
+
+        factor1, factor2 = jsp.linalg.lu_factor(M_I)
+        factor1s = factor1s.at[i, :, :].set(factor1)
+        factor2s = factor2s.at[i, :, :].set(factor2)
 
         '''
         check against cvxpy
@@ -213,19 +204,15 @@ def setup_probs(cfg):
                   thetas=thetas,
                   x_stars=x_stars,
                   y_stars=y_stars,
-                #   M_tilde=M_tilde,
-                #   q_tilde=q_tilde,
-                #   M1=M_tensor[0,:,:],
-                #   q1=q_mat[0,:]
-                  matrix_invs=matrix_invs
+                #   matrix_invs=matrix_invs
                   )
     elif cfg.linear_system_solve == 'factor':
         jnp.savez(output_filename,
                   thetas=thetas,
                   x_stars=x_stars,
                   y_stars=y_stars,
-                  factors1s=factor1s,
-                  factors2s=factor2s
+                #   factors1s=factor1s,
+                #   factors2s=factor2s
                   )
     # print(f"finished saving final data... took {save_time-t0}'", flush=True)
     save_time = time.time()

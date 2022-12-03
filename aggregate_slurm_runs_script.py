@@ -21,6 +21,8 @@ def markowitz_main(cfg):
     creates new folder with hydra
     combines all the npz files into 1
     '''
+    example = 'markowitz'
+    orig_cwd = hydra.utils.get_original_cwd()
     datetimes = cfg.datetimes
     if len(datetimes) == 0:
         # get the most recent datetime and update datetimes
@@ -38,7 +40,7 @@ def markowitz_main(cfg):
     example = 'markowitz'
 
     # the location specified in the aggregation cfg file
-    orig_cwd = hydra.utils.get_original_cwd()
+    
     data_yaml_filename = f"{orig_cwd}/outputs/{example}/data_setup_outputs/{datetime0}/.hydra/config.yaml"
 
     # read the yaml file
@@ -48,9 +50,9 @@ def markowitz_main(cfg):
         except yaml.YAMLError as exc:
             print(exc)
             setup_cfg = {}
-    pen_ret = 10**setup_cfg['prob_setup']['pen_rets_min']
+    pen_ret = 10**setup_cfg['pen_rets_min']
     # extract M
-    a = setup_cfg['']
+    a = setup_cfg['a']
     static_dict = markowitz.static_canon(a)
     M = static_dict['M']
     def get_q(theta):
@@ -151,6 +153,8 @@ def vehicle_main(cfg):
     creates new folder with hydra
     combines all the npz files into 1
     '''
+    example = 'vehicle'
+    orig_cwd = hydra.utils.get_original_cwd()
     # access first datafile via the data_cfg file
     datetimes = cfg.datetimes
     if len(datetimes) == 0:
@@ -162,7 +166,6 @@ def vehicle_main(cfg):
     with open('agg_datetimes.yaml', 'w') as file:
         yaml.dump(cfg, file)
     datetime0 = datetimes[0]
-    orig_cwd = hydra.utils.get_original_cwd()
     example = 'vehicle'
     folder = f"{orig_cwd}/outputs/{example}/data_setup_outputs/{datetime0}"
     folder_entries = os.listdir(folder)

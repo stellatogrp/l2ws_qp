@@ -58,9 +58,6 @@ class L2WSmodel(object):
             self.static_M, self.static_algo_factor = None, None
             self.matrix_invs_train = dict['matrix_invs_train']
             self.matrix_invs_test = dict['matrix_invs_test']
-        '''
-        random init neural network params
-        '''
 
         self.nn_cfg = dict['nn_cfg']
         input_size = self.train_inputs.shape[1]
@@ -74,34 +71,8 @@ class L2WSmodel(object):
         self.params = init_network_params(layer_sizes, random.PRNGKey(0))
         self.state = None
 
-        '''
-        create loss functions for
-        -- differentiable, k = train_unrolls
-        -- non-diff, k = [test_unrolls]
-        '''
-
-        '''
-        other init
-        '''
         self.epoch = 0
         self.batched_predict_y = vmap(predict_y, in_axes=(None, 0))
-
-        # A = -jnp.array(self.M[self.n:, :self.n])
-        # P = jnp.array(self.M[:self.n, :self.n])
-
-        # self.loss_fn_train = create_loss_fn(
-        #     lin_sys_solve, proj, self.train_unrolls, self.M, self.m, self.n,
-        #     self.prediction_variable, diff_required=True)
-        # self.loss_fn_eval = create_loss_fn(
-        #     lin_sys_solve, proj, self.train_unrolls, self.M, self.m, self.n,
-        #     self.prediction_variable, diff_required=False)
-
-        # static_flag = input_dict['static_flag']
-        # lin_sys_solve, proj = input_dict['lin_sys_solve'], input_dict['proj']
-        # unrolls = input_dict['unrolls']
-        # m, n = input_dict['m'], input_dict['n']
-        # prediction_variable = input_dict['prediction_variable']
-        # M_static, factor_static = input_dict['M_static'], input_dict['factor_static']
 
         train_loss_dict = {'static_flag': self.static_flag,
                            'lin_sys_solve': lin_sys_solve,
@@ -163,10 +134,11 @@ class L2WSmodel(object):
         self.saveable_model['proxf'] = None
 
         self.train_data = []
+        
         self.state = self.optimizer.init_state(self.params)
         self.tr_losses_batch = []
         self.te_losses = []
-        # self.test_data = None
+        
 
     def pretrain(self, num_iters, stepsize=.001, method='adam', df_pretrain=None):
         # create pretrain function
@@ -316,7 +288,6 @@ class L2WSmodel(object):
         time_per_prob = (time.time() - test_time0)/num_probs
         print('eval time per prob', time_per_prob)
         print(f"[Epoch {self.epoch}] [k {k}] {tag} loss: {loss:.6f}")
-        # pdb.set_trace()
         
         return loss, out, time_per_prob
 
@@ -327,7 +298,6 @@ class L2WSmodel(object):
         this will also save the losses
         '''
 
-        # path = os.path.join(self.work_dir, f"k={self.train_unrolls}.pkl")
         path = self.work_dir
 
         self.saveable_model['params'] = self.params
@@ -337,13 +307,6 @@ class L2WSmodel(object):
         with open(pkl_filename, 'wb') as f:
             pkl.dump(self.saveable_model, f)
 
-        # if epoch_out is not None:
-            # if self.train_data is None:
-            #     self.train_data = epoch_out[0]
-            #     self.test_data = epoch_out[1]
-            # else:
-            #     self.train_data = np.vstack((self.train_data, epoch_out[0]))
-            #     self.test_data = np.vstack((self.test_data, epoch_out[1]))
         if self.train_data is not None:
             columns_train = ['train_loss', 'train_obj',
                              'rel_train_subopt', 'train_infeas']
@@ -356,15 +319,6 @@ class L2WSmodel(object):
             df.to_csv(self.work_dir + 'results_test_data.csv')
 
 
-def recover_l2c_model(saveable_model, loss_from_x_nexos, proxf, pi):
-    saveable_model['loss_from_x_nexos'] = loss_from_x_nexos
-    saveable_model['proxf'] = proxf
-    saveable_model['pi'] = pi
-    l2c_model = L2Cmodel(saveable_model)
-    l2c_model.params = saveable_model['params']
-    l2c_model.state = saveable_model['state']
-    return l2c_model
-
 
 def create_loss_fn(input_dict):
     static_flag = input_dict['static_flag']
@@ -376,28 +330,6 @@ def create_loss_fn(input_dict):
 
     # if dynamic, the next 2 set to None
     M_static, factor_static = input_dict['M_static'], input_dict['factor_static']
-
-    # if static_flag:
-    #     P, A = M_static[:n, :n], M_static[n:, :n]
-
-    #     def fixed_point(z_init, q):
-    #         u_tilde = lin_sys_solve(z_init - q)
-    #         u_temp = (2*u_tilde - z_init)
-    #         u = proj(u_temp)
-    #         # u^k, v^k = (x^k, y^k), (0, s^k)
-    #         v = u + z_init - 2*u_tilde
-    #         z = z_init + u - u_tilde
-    #         return z, u, v
-
-    # else:
-    #     def fixed_point(z_init, M_dynamic, q):
-    #         u_tilde = lin_sys_solve(z_init - q)
-    #         u_temp = (2*u_tilde - z_init)
-    #         u = proj(u_temp)
-    #         # u^k, v^k = (x^k, y^k), (0, s^k)
-    #         v = u + z_init - 2*u_tilde
-    #         z = z_init + u - u_tilde
-    #         return z, u, v
 
     def fixed_point(z_init, factor, q):
         u_tilde = lin_sys_solve(factor, z_init - q)
@@ -470,21 +402,10 @@ def create_loss_fn(input_dict):
         else:
             return loss, iter_losses, primal_residuals, dual_residuals, out
 
-    # @functools.partial(jax.jit, static_argnums=(3, 4, 5,))
     if diff_required:
         out_axes = (0, 0, (0, 0, 0, 0))
     else:
         out_axes = (0, 0, 0, 0, (0, 0, 0, 0))
-
-    # else:
-    #     batch_predict = vmap(predict, in_axes=(
-    #         None, 0, 0, None), out_axes=(0, 0, 0, 0, (0, 0, 0, 0)))
-    #     @functools.partial(jax.jit, static_argnums=(3,))
-    #     def loss_fn(params, inputs, q, iters):
-    #         losses, iter_losses, primal_residuals, dual_residuals, out = batch_predict(
-    #             params, inputs, q, iters)
-    #         loss_out = out, losses, iter_losses, primal_residuals, dual_residuals
-    #         return losses.mean(), loss_out
 
     if static_flag:
         predict_final = functools.partial(predict,

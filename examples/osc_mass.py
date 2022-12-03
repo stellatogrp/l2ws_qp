@@ -101,7 +101,7 @@ def run(run_cfg):
     nx, nu = setup_cfg['nx'], setup_cfg['nu']
     Q_val, QT_val = setup_cfg['Q_val'], setup_cfg['QT_val']
     R_val = setup_cfg['R_val']
-    system = setup_cfg['system']
+
     Ad, Bd = oscillating_masses_setup(nx, nu)
 
     static_dict = static_canon(T, nx, nu,

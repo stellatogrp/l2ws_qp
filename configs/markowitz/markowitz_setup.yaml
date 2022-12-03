@@ -1,10 +1,10 @@
-prob_setup:
-  a: 3000
-  N_train: 1000
-  N_test: 100
-  mult_factor: 1000
-  std_mult: .3
-  pen_rets_min: -1.5
-  pen_rets_max: -1.5
-  max_clip: 1
-  min_clip: -1
+a: 3000
+N_train: 100
+N_test: 20
+mult_factor: 1000
+std_mult: .3
+pen_rets_min: -1.5
+pen_rets_max: -1.5
+max_clip: 1
+min_clip: -1
+solve_acc: 1e-3
