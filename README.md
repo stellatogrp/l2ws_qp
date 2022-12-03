@@ -71,9 +71,10 @@ python l2ws_train.py markowitz local
 python plot_script.py markowitz local
 ```
 
-Output folders will automatically be created from hydra and for the oscillating masses example, the plot to check the performance on different models will be creted in this file.
+Output folders will automatically be created from hydra and for the oscillating masses example, the plot and csv files to check the performance on different models will be creted in this file.
 ```
-outputs/osc_mass/2022-12-03/14-54-32/plots/eval_iters
+outputs/osc_mass/2022-12-03/14-54-32/plots/eval_iters.pdf
+outputs/osc_mass/2022-12-03/14-54-32/plots/accuracies.csv
 ```
 
 Adjust the config files to try different settings; for example, the number of train/test data, number of evaluation iterations, neural network training, and problem setup configurations. We automatically use the most recent output after each stage, but the specific datetime can be inputted. Additionally, the final evaluation plot can take in multiple training datetimes in a list. See the commented out lines in the config files.
