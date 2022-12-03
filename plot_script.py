@@ -11,6 +11,7 @@ import hydra
 import numpy as np
 import pandas as pd
 import math
+from utils.data_utils import recover_last_datetime
 plt.rcParams.update({
     "text.usetex": True,
     "font.family": "serif",   # For talks, use sans-serif
@@ -18,15 +19,9 @@ plt.rcParams.update({
 })
 
 
-def main():
-    # visualization_plot()
-    unrolled_iters_plot()
-    # quick_plot()
-
-
 @hydra.main(config_path='configs/osc_mass', config_name='osc_mass_plot.yaml')
-def mpc_plot_eval_iters(cfg):
-    example = 'mpc'
+def osc_mass_plot_eval_iters(cfg):
+    example = 'osc_mass'
     plot_eval_iters(example, cfg)
 
 
@@ -142,17 +137,28 @@ def plot_eval_iters(example, cfg):
     2. list of fully trained models
     3. pretraining only
     '''
-    eval_iters = cfg.eval_iters
-    datetimes = cfg.output_datetimes
-    pretrain_datetime = cfg.pretrain_datetime
-    no_learning_datetime = cfg.no_learning_datetime
-    naive_ws_datetime = cfg.naive_ws_datetime
     orig_cwd = hydra.utils.get_original_cwd()
+    eval_iters = cfg.eval_iters
+
+    datetimes = cfg.output_datetimes
+    if datetimes == []:
+        dt = recover_last_datetime(orig_cwd, example, 'train')
+        datetimes = [dt]
+
+    pretrain_datetime = cfg.pretrain_datetime
+
+    no_learning_datetime = cfg.no_learning_datetime
+    if no_learning_datetime == '':
+        no_learning_datetime = recover_last_datetime(orig_cwd, example, 'train')
+
+    naive_ws_datetime = cfg.naive_ws_datetime
+    if naive_ws_datetime == '':
+        naive_ws_datetime = recover_last_datetime(orig_cwd, example, 'train')
+    
     accs = cfg.accuracies
     df_acc = pd.DataFrame()
     df_acc['accuracies'] = np.array(accs)
     
-
     '''
     no learning
     '''
@@ -335,10 +341,10 @@ if __name__ == '__main__':
         sys.argv[1] = base + 'markowitz/plots/${now:%Y-%m-%d}/${now:%H-%M-%S}'
         sys.argv = [sys.argv[0], sys.argv[1]]
         markowitz_plot_eval_iters()
-    elif sys.argv[1] == 'mpc':
-        sys.argv[1] = base + 'mpc/plots/${now:%Y-%m-%d}/${now:%H-%M-%S}'
+    elif sys.argv[1] == 'osc_mass':
+        sys.argv[1] = base + 'osc_mass/plots/${now:%Y-%m-%d}/${now:%H-%M-%S}'
         sys.argv = [sys.argv[0], sys.argv[1]]
-        mpc_plot_eval_iters()
+        osc_mass_plot_eval_iters()
     elif sys.argv[1] == 'vehicle':
         sys.argv[1] = base + 'vehicle/plots/${now:%Y-%m-%d}/${now:%H-%M-%S}'
         sys.argv = [sys.argv[0], sys.argv[1]]
