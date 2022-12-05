@@ -270,8 +270,10 @@ class Workspace:
                 
         loss_train, out_train, train_time = eval_out
         iter_losses_mean = out_train[2].mean(axis=0)
+        if not os.path.exists('losses_over_examples'):
+            os.mkdir('losses_over_examples')
         plt.plot(out_train[2])
-        plt.savefig(f"losses_{col}_plot.pdf", bbox_inches='tight')
+        plt.savefig(f"losses_over_examples/losses_{col}_plot.pdf", bbox_inches='tight')
         plt.clf()
         primal_residuals = out_train[3].mean(axis=0)
         dual_residuals = out_train[4].mean(axis=0)

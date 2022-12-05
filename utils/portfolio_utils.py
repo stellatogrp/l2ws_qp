@@ -7,11 +7,16 @@ import pdb
 import datetime as dt
 import os
 import time
+from get_all_tickers import get_tickers as gt
+import yfinance as yf
+from yahoofinancials import YahooFinancials
+import matplotlib.pyplot as plt
 # quandl.ApiConfig.api_key = os.environ['QUANDL_API_KEY']
 
 
 def main():
-    new()
+    # new()
+    yahoo()
 
 def new():
     stacked_filename = 'data/portfolio_data/WIKI_prices_all.csv'
@@ -43,63 +48,28 @@ def new():
     filename = 'data/portfolio_data/ret_cov.npz'
     np.savez(filename, ret=short_ret_np, cov=cov_np)
     
-
-def old():
+def yahoo():
     '''
-    read csv file that contains all the headers
+    get all tickers
     '''
-    # symbol_filename = 'data/portfolio_data/WIKI_prices.csv'
-    # symbol_df = pd.read_csv(symbol_filename)
-    stacked_filename = 'data/portfolio_data/WIKI_prices_all.csv'
-    stacked_df = pd.read_csv(stacked_filename)
+    tickers_df = pd.read_csv('data/portfolio_data/yahoo_tickers.csv')
+    tickers_list_ = tickers_df.values.tolist()
+    tickers_list = [tt[0] for tt in tickers_list_]
+    data1 = yf.download(tickers_list[:2000], start="2020-01-01", end="2021-01-01")
+    data2 = yf.download(tickers_list[2000:], start="2020-01-01", end="2021-01-01")
+    data = data1.append(data2, ignore_index=True)
+    close_data_all = data['Adj Close']
+    close_data = close_data_all.dropna(axis=1, how='all')
+    close_data = close_data.fillna(close_data.mean())
+    
+    ret = close_data.diff() / close_data
+    covariance = ret.cov()
 
-    dates = stacked_df['date'].unique()
-    dates = np.insert(dates, 0, 'ticker')
-    out_df = pd.DataFrame(columns=dates)
-    print('num_tickers', len(symbol_df.ticker))
-    for ticker in symbol_df.ticker:
-        print('ticker', ticker)
-        # filtered = stacked_df.filter(like=ticker, axis=0)
-        curr = stacked_df.ticker == ticker
-        vals = stacked_df[curr]
-        new_row = dict(zip(vals['date'], vals['adj_close']))
-        new_row['ticker'] = ticker
-        out_df = out_df.append(new_row, ignore_index=True)
+    ret_np = ret.to_numpy()
+    cov_np = covariance.to_numpy()
+    filename = 'data/portfolio_data/yahoo_ret_cov.npz'
 
-        # pdb.set_trace()
-    out_df.to_csv('data/portfolio_data/all_stocks.csv')
-    # pdb.set_trace()
-    # return
-    '''
-    # make quandl API call
-    # '''
-    # start_date = dt.datetime(2016, 1, 1)
-    # end_date = dt.datetime(2016, 2, 2)
-    # raw_tickers = symbol_df.ticker[:1000]
-    # tickers = "WIKI/" + raw_tickers.str.replace(".", "_")
-    # partial_request = list(tickers + ".11") #+ list(tickers + ".12")
-    # request_field = list(sorted(partial_request))
-
-    # print("requesting {} tickers".format(len(request_field)))
-    # t0 = time.time()
-    # raw_s_data = quandl.get(request_field,
-    #                         start_date=start_date, end_date=end_date)
-
-    # print("processing data...")
-    # print(f"request took {time.time() - t0} seconds")
-
-    # '''
-    # write to a new csv file
-    # each ticker will have 13 years of stock data
-    # (3000) * (13*365)
-    # '''
-    # # pdb.set_trace()
-    # # df_results = pd.concat(raw_s_data, ignore_index=True).sort_values(
-    # #     by=['col_1', 'col6']).reset_index(drop=True)
-
-    # # # Store dataframe at each iteration (in case something breaks)
-    # # df_results.to_csv('myfile.csv')
-    # raw_s_data.to_csv('data/portfolio_data/stock_prices.csv')
+    np.savez(filename, ret=ret_np, cov=cov_np)
 
 
 if __name__ == '__main__':

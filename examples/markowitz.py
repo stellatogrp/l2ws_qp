@@ -44,10 +44,8 @@ def run(run_cfg):
 
     it will create the l2a_model
     '''
-    a = run_cfg['a']
-    static_dict = static_canon(a)
     
-
+   
     datetime = run_cfg.data.datetime
     orig_cwd = hydra.utils.get_original_cwd()
     example = 'markowitz'
@@ -62,6 +60,8 @@ def run(run_cfg):
             setup_cfg = {}
 
     pen_ret = 10**setup_cfg['pen_rets_min']
+    a = setup_cfg['a']
+    static_dict = static_canon(setup_cfg['data'], a)
     def get_q(theta):
         q = jnp.zeros(2*a + 1)
         q = q.at[:a].set(-theta * pen_ret)
@@ -98,24 +98,26 @@ def setup_probs(setup_cfg):
 
     # read in the returns dataframe
     orig_cwd = hydra.utils.get_original_cwd()
-    ret_cov_np = f"{orig_cwd}/data/portfolio_data/ret_cov.npz"
+    if cfg.data == 'yahoo':
+        ret_cov_np = f"{orig_cwd}/data/portfolio_data/yahoo_ret_cov.npz"
+    elif cfg.data == 'nasdaq':
+        ret_cov_np = f"{orig_cwd}/data/portfolio_data/ret_cov.npz"
+    
     ret_cov_loaded = np.load(ret_cov_np)
 
-    ret = ret_cov_loaded['ret'][:, :a]
-    ret = ret * SCALE_FACTOR
-
+    ret = ret_cov_loaded['ret'][1:, :a]
+    # ret = ret * SCALE_FACTOR
+    
     ret_mean = ret.mean(axis=0)
     clipped_ret_mean = np.clip(ret_mean, a_min=min_clip, a_max=max_clip)
+    clipped_ret_mean = clipped_ret_mean * SCALE_FACTOR
 
     log.info('creating static canonicalization...')
     t0 = time.time()
-    out_dict = static_canon(a)
+    out_dict = static_canon(cfg.data, a)
     t1 = time.time()
     log.info(f"finished static canonicalization - took {t1-t0} seconds")
 
-    # Sigma, M = out_dict['Sigma'], out_dict['M']
-    # ATA_factor, algo_factor = out_dict['ATA_factor'], out_dict['algo_factor']
-    # cones_array = out_dict['cones_array']
     A_sparse = out_dict['A_sparse']
     A_sparse, P_sparse = out_dict['A_sparse'], out_dict['P_sparse']
     b = out_dict['b']
@@ -149,11 +151,14 @@ def setup_probs(setup_cfg):
     mu_mat = np.zeros((N, a))
     pen_rets = np.zeros(N)
     scs_instances = []
+
     for i in range(N):
         log.info(f"solving problem number {i}")
-        mu_mat[i, :] = clipped_ret_mean * \
-            (1 + std_mult*np.random.normal(size=(a))
-             ) + std_mult *np.random.normal(size=(a))
+        # mu_mat[i, :] = clipped_ret_mean * \
+        #     (1 + std_mult*np.random.normal(size=(a))
+        #      ) + std_mult *np.random.normal(size=(a))
+        mu_mat[i, :] = clipped_ret_mean + SCALE_FACTOR * std_mult * (2 * np.random.rand(a) - 1)
+        # pdb.set_trace()
 
         sample = np.random.rand(1) * (pen_rets_max -
                                       pen_rets_min) + pen_rets_min
@@ -175,27 +180,7 @@ def setup_probs(setup_cfg):
         s_stars = s_stars.at[i, :].set(scs_instance.s_star)
         q_mat = q_mat.at[i, :].set(scs_instance.q)
         solve_times[i] = scs_instance.solve_time
-
-        # save to the npz file every 100 iterations
-        # if i % 100 == 0:
-        #     print('saving dynamic data...', flush=True)
-        #     t0 = time.time()
-        #     jnp.savez(output_filename,
-        #               thetas=thetas,
-        #               x_stars=x_stars,
-        #               y_stars=y_stars,
-        #               s_stars=s_stars,
-        #               q_mat=q_mat,
-        #               solve_times=solve_times)
-        #     save_time = time.time()
-        #     print(
-        #         f"finished saving static data... took {save_time-t0}'", flush=True)
     
-    # for i in range(4):
-    #     plt.plot(x_stars[i, :])
-    # plt.show()
-    
-
     # resave the data??
     # print('saving final data...', flush=True)
     log.info('saving final data...')
@@ -204,14 +189,22 @@ def setup_probs(setup_cfg):
               thetas=thetas,
               x_stars=x_stars,
               y_stars=y_stars,
-            #   s_stars=s_stars,
-              #q_mat=q_mat,
               )
     save_time = time.time()
     log.info(f"finished saving final data... took {save_time-t0}'")
 
+    # save plot of first 5 solutions
+    for i in range(5):
+        plt.plot(x_stars[i, :])
+    plt.savefig('opt_solutions.pdf')
 
-def static_canon(a):
+    # save plot of first 5 parameters
+    for i in range(5):
+        plt.plot(thetas[i, :])
+    plt.savefig('thetas.pdf')
+
+
+def static_canon(data, a):
     '''
     This method produces the parts of each problem that does not change
     i.e. P, A, b, cones
@@ -225,7 +218,11 @@ def static_canon(a):
     2. factor(A.T A)
     '''
     orig_cwd = hydra.utils.get_original_cwd()
-    ret_cov_np = f"{orig_cwd}/data/portfolio_data/ret_cov.npz"
+    if data == 'yahoo':
+        ret_cov_np = f"{orig_cwd}/data/portfolio_data/yahoo_ret_cov.npz"
+    elif data == 'nasdaq':
+        ret_cov_np = f"{orig_cwd}/data/portfolio_data/ret_cov.npz"
+    
     ret_cov_loaded = np.load(ret_cov_np)
     Sigma = ret_cov_loaded['cov'][:a, :a] + 1e-3 * np.eye(a)
     n = a
@@ -293,7 +290,6 @@ code for automatic canon
 def our_scs():
     a = 3000
     m, n = a+1, a
-    # out_dict = static_canon(a)
     # Sigma, M = out_dict['Sigma'], out_dict['M']
     # ATA_factor, algo_factor = out_dict['ATA_factor'], out_dict['algo_factor']
     # cones_array, A_sparse = out_dict['cones_array'], out_dict['A_sparse']
@@ -322,81 +318,6 @@ def our_scs():
     data = dict(P=P_jax*1000, A=A_jax, b=b_jax, c=c_jax*1000*.03, cones=cones_dict)
     scs_jax(data)
 
-
-def speed_test(cfg):
-    orig_cwd = hydra.utils.get_original_cwd()
-    a = cfg.a
-    N_train = cfg.N_train
-    '''
-    step 1: read the problem data
-    '''
-    out_dict = static_canon(a)
-    A_sparse, P_sparse = out_dict['A_sparse'], out_dict['P_sparse']
-    b = out_dict['b']
-    data_file = cfg.data_file
-    sol_file = cfg.sol_file
-    data_obj = jnp.load(f"{orig_cwd}/{data_file}/data_setup_aggregate.npz")
-    sol_obj = jnp.load(f"{orig_cwd}/{sol_file}/x_primals.npz")
-    
-    q_mat_test = data_obj['q_mat'][N_train:, :]
-    xy_l2a = sol_obj['final'][:, 0, :]
-    x_l2a, y_l2a = xy_l2a[:, :a], xy_l2a[:, a:]
-    N_test = x_l2a.shape[0]
-    s_l2a = jnp.zeros((N_test, cfg.a + 1))
-    s_l2a = s_l2a.at[:N_test, 1:].set(x_l2a)
-    cones_dict = dict(z=1, l=a)
-
-    '''
-    step 2: get the primal solutions
-    '''
-    
-
-    '''
-    step 3: convert primal solutions x to get (x, y, s)
-    '''
-    A_jax = jnp.array(A_sparse.todense())
-    P_jax = jnp.array(P_sparse.todense())
-    ATAinv = jnp.linalg.inv(A_jax.T @ A_jax)
-
-    # def get_s_y(x, c):
-    #     s = jnp.zeros(cfg.a + 1)
-    #     s = s.at[1:].set(x)
-    #     nu = -ATAinv @ (P_jax @ x + c)
-    #     y_dual = A_jax @ nu
-    #     y = y_dual - y_dual[1:].min()
-    #     return s, y
-    # pdb.set_trace()
-    # batch_get_s_y = vmap(get_s_y, in_axes=(0, 0), out_axes=(0, 0))
-
-    # s_l2a, y_l2a = batch_get_s_y(x_l2a, q_mat_test[:N_test, :a])
-
-    '''
-    step 4: solve w/out warm start and w/ warm start
-    '''
-    std_solve_times = np.zeros(N_test)
-    l2a_solve_times = np.zeros(N_test)
-    for i in range(20):
-        data = dict(P=P_sparse, A=A_sparse, b=b, c=q_mat_test[i, :a])
-        solver = scs.SCS(data, cones_dict, eps_abs=1e-4, eps_rel=1e-4)
-
-        # no learning
-        sol = solver.solve(warm_start=False)
-        std_solve_times[i] = sol['info']['solve_time'] / 1000
-
-        # l2a
-        x, y = np.array(x_l2a[i, :]), np.array(y_l2a[i, :])
-        s = np.array(s_l2a[i, :])
-        l2a_sol = solver.solve(warm_start=True, x=x, y=y, s=s)
-        l2a_solve_times[i] = l2a_sol['info']['solve_time'] / 1000
-
-        log.info(f"std_solve_times{std_solve_times}")
-        log.info(f"l2a_solve_times{l2a_solve_times}")
-        print('std_solve_times', std_solve_times)
-        print('l2a_solve_times', l2a_solve_times)
-    print('std_solve_times mean', std_solve_times.mean())
-    print('l2a_solve_times', l2a_solve_times.mean())
-    log.info(f"std_solve_times{std_solve_times.mean()}")
-    log.info(f"l2a_solve_times{l2a_solve_times.mean()}")
 
 if __name__ == '__main__':
     our_scs()

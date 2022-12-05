@@ -53,7 +53,7 @@ def markowitz_main(cfg):
     pen_ret = 10**setup_cfg['pen_rets_min']
     # extract M
     a = setup_cfg['a']
-    static_dict = markowitz.static_canon(a)
+    static_dict = markowitz.static_canon(setup_cfg['data'], a)
     M = static_dict['M']
     def get_q(theta):
         q = jnp.zeros(2*a + 1)
