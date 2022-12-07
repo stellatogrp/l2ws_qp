@@ -15,11 +15,12 @@ import matplotlib.pyplot as plt
 
 
 def main():
-    # new()
-    yahoo()
+    nasdaq()
+    # yahoo()
 
-def new():
-    stacked_filename = 'data/portfolio_data/WIKI_prices_all.csv'
+def nasdaq():
+    # stacked_filename = 'data/portfolio_data/WIKI_prices_all.csv'
+    stacked_filename = 'data/portfolio_data/EOD.csv'
     stacked_df = pd.read_csv(stacked_filename)
 
     # create a new dataframe with 'date' column as index
@@ -31,13 +32,19 @@ def new():
     # check the head of the output
     clean_data.head()
 
-    clean_data_shorter = clean_data.iloc[2300:, :]
+    close_data = clean_data.dropna(axis=1, how='any')
+    close_data_shorter = close_data.iloc[:3000, :]
+    
+
+    # clean_data_shorter = clean_data.iloc[2300:, :]
 
     # fill in missing entries
-    ret = clean_data_shorter.diff() / clean_data_shorter
+    ret = close_data_shorter.diff() / close_data_shorter
     ret = ret.fillna(ret.mean())
 
     short_ret = ret.iloc[:, :3000]
+    short_ret = short_ret.clip(lower=-.5, upper=.5)
+    pdb.set_trace()
     short_ret.to_csv('data/portfolio_data/returns.csv')
 
     covariance = short_ret.cov()
@@ -45,7 +52,10 @@ def new():
 
     short_ret_np = short_ret.to_numpy()
     cov_np = covariance.to_numpy()
-    filename = 'data/portfolio_data/ret_cov.npz'
+    # cov_np[cov_np > .001] = .001
+    # cov_np[cov_np < -.001] = -.001
+    filename = 'data/portfolio_data/eod_ret_cov.npz'
+    pdb.set_trace()
     np.savez(filename, ret=short_ret_np, cov=cov_np)
     
 def yahoo():

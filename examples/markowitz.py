@@ -17,7 +17,7 @@ import os
 import scs
 import logging
 import yaml
-SCALE_FACTOR = 1e3
+SCALE_FACTOR = 1e2
 log = logging.getLogger(__name__)
 
 
@@ -102,15 +102,17 @@ def setup_probs(setup_cfg):
         ret_cov_np = f"{orig_cwd}/data/portfolio_data/yahoo_ret_cov.npz"
     elif cfg.data == 'nasdaq':
         ret_cov_np = f"{orig_cwd}/data/portfolio_data/ret_cov.npz"
+    elif cfg.data == 'eod':
+        ret_cov_np = f"{orig_cwd}/data/portfolio_data/eod_ret_cov.npz"
     
     ret_cov_loaded = np.load(ret_cov_np)
-
+    Sigma = ret_cov_loaded['cov'] #+ np.eye(a) * 1e-3
     ret = ret_cov_loaded['ret'][1:, :a]
     # ret = ret * SCALE_FACTOR
     
     ret_mean = ret.mean(axis=0)
-    clipped_ret_mean = np.clip(ret_mean, a_min=min_clip, a_max=max_clip)
-    clipped_ret_mean = clipped_ret_mean * SCALE_FACTOR
+    clipped_ret_mean_orig = np.clip(ret_mean, a_min=min_clip, a_max=max_clip)
+    clipped_ret_mean = clipped_ret_mean_orig * SCALE_FACTOR
 
     log.info('creating static canonicalization...')
     t0 = time.time()
@@ -152,13 +154,17 @@ def setup_probs(setup_cfg):
     pen_rets = np.zeros(N)
     scs_instances = []
 
+    mu_mat = SCALE_FACTOR * np.random.multivariate_normal(clipped_ret_mean_orig, Sigma, size=(N))
+    # pdb.set_trace()
+
     for i in range(N):
         log.info(f"solving problem number {i}")
         # mu_mat[i, :] = clipped_ret_mean * \
         #     (1 + std_mult*np.random.normal(size=(a))
         #      ) + std_mult *np.random.normal(size=(a))
-        mu_mat[i, :] = clipped_ret_mean + SCALE_FACTOR * std_mult * (2 * np.random.rand(a) - 1)
+        # mu_mat[i, :] = clipped_ret_mean + SCALE_FACTOR * std_mult * (2 * np.random.rand(a) - 1)
         # pdb.set_trace()
+        # mu_mat[i, :] = SCALE_FACTOR * np.random.multivariate_normal(clipped_ret_mean_orig, Sigma)
 
         sample = np.random.rand(1) * (pen_rets_max -
                                       pen_rets_min) + pen_rets_min
@@ -222,9 +228,11 @@ def static_canon(data, a):
         ret_cov_np = f"{orig_cwd}/data/portfolio_data/yahoo_ret_cov.npz"
     elif data == 'nasdaq':
         ret_cov_np = f"{orig_cwd}/data/portfolio_data/ret_cov.npz"
+    elif data == 'eod':
+        ret_cov_np = f"{orig_cwd}/data/portfolio_data/eod_ret_cov.npz"
     
     ret_cov_loaded = np.load(ret_cov_np)
-    Sigma = ret_cov_loaded['cov'][:a, :a] + 1e-3 * np.eye(a)
+    Sigma = ret_cov_loaded['cov'][:a, :a] #+ 1e-3 * np.eye(a)
     n = a
     m = a + 1
 

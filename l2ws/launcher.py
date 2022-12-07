@@ -243,14 +243,14 @@ class Workspace:
                 
             elif col == 'no_train':
                 # random init with neural network
-                _, predict_size = self.l2ws_model.w_stars_test.shape
-                random_start = 10*np.random.normal(size=(num, predict_size))
-                inputs = jnp.array(random_start)
-                fixed_ws = True
+                # _, predict_size = self.l2ws_model.w_stars_test.shape
+                # random_start = 10*np.random.normal(size=(num, predict_size))
+                # inputs = jnp.array(random_start)
+                # fixed_ws = True
 
                 # 
-                # inputs = self.l2ws_model.test_inputs[:num, :]
-                # fixed_ws = False
+                inputs = self.l2ws_model.test_inputs[:num, :]
+                fixed_ws = False
             else:
                 inputs = self.l2ws_model.test_inputs[:num, :]
             if self.l2ws_model.static_flag:
@@ -272,9 +272,11 @@ class Workspace:
         iter_losses_mean = out_train[2].mean(axis=0)
         if not os.path.exists('losses_over_examples'):
             os.mkdir('losses_over_examples')
-        plt.plot(out_train[2])
+        plt.plot(out_train[2].T)
+        plt.yscale('log')
         plt.savefig(f"losses_over_examples/losses_{col}_plot.pdf", bbox_inches='tight')
         plt.clf()
+
         primal_residuals = out_train[3].mean(axis=0)
         dual_residuals = out_train[4].mean(axis=0)
         print('after iterations z', out_train[0][1][0,:])
@@ -370,20 +372,20 @@ class Workspace:
             self.num_samples, 'fixed_ws', train=False, plot_pretrain=False)
         
 
-        print("Pretraining...")
-        self.df_pretrain = pd.DataFrame(
-            columns=['pretrain_loss', 'pretrain_test_loss'])
-        train_pretrain_losses, test_pretrain_losses = self.l2ws_model.pretrain(self.pretrain_cfg.pretrain_iters,
-                                                                              stepsize=self.pretrain_cfg.pretrain_stepsize,
-                                                                              df_pretrain=self.df_pretrain)
-        plt.plot(train_pretrain_losses, label='train')
-        plt.plot(test_pretrain_losses, label='test')
-        plt.yscale('log')
-        plt.xlabel('pretrain iterations')
-        plt.ylabel('pretrain loss')
-        plt.legend()
-        plt.savefig('pretrain_losses.pdf')
-        plt.clf()
+        # print("Pretraining...")
+        # self.df_pretrain = pd.DataFrame(
+        #     columns=['pretrain_loss', 'pretrain_test_loss'])
+        # train_pretrain_losses, test_pretrain_losses = self.l2ws_model.pretrain(self.pretrain_cfg.pretrain_iters,
+        #                                                                       stepsize=self.pretrain_cfg.pretrain_stepsize,
+        #                                                                       df_pretrain=self.df_pretrain)
+        # plt.plot(train_pretrain_losses, label='train')
+        # plt.plot(test_pretrain_losses, label='test')
+        # plt.yscale('log')
+        # plt.xlabel('pretrain iterations')
+        # plt.ylabel('pretrain loss')
+        # plt.legend()
+        # plt.savefig('pretrain_losses.pdf')
+        # plt.clf()
 
         self.logf = open('train_results.csv', 'a')
         fieldnames = ['iter', 'train_loss', 'moving_avg_train', 'test_loss']

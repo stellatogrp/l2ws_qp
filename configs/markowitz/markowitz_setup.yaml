@@ -1,11 +1,11 @@
-a: 2342 # 3000 for nasdaq, 2342 for yahoo
+a: 3000 # 3000 for nasdaq, 2342 for yahoo
 N_train: 100
 N_test: 20
 mult_factor: 1000
-std_mult: 1e-4 #.3
-pen_rets_min: -1.5
-pen_rets_max: -1.5
-max_clip: 1e-3 #1
-min_clip: 1e-3 #-1
-solve_acc: 1e-4
-data: 'yahoo' #'nasdaq'
+std_mult: 1e-3 #.3
+pen_rets_min: -2 #-1.5
+pen_rets_max: -2 #-1.5
+max_clip: 3e-3 #1
+min_clip: -3e-3 #-1
+solve_acc: 1e-3
+data: 'eod' #'yahoo' #'nasdaq'
