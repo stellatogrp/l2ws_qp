@@ -31,9 +31,9 @@ def markowitz_main(cfg):
 
         cfg = {'datetimes': datetimes}
         
-    # save the datetime to we can recover
-    with open('agg_datetimes.yaml', 'w') as file:
-        yaml.dump(cfg, file)
+        # save the datetime to we can recover
+        with open('agg_datetimes.yaml', 'w') as file:
+            yaml.dump(cfg, file)
 
     datetime0 = datetimes[0]
     static_flag = True

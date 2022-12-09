@@ -244,7 +244,7 @@ class Workspace:
             elif col == 'no_train':
                 # random init with neural network
                 # _, predict_size = self.l2ws_model.w_stars_test.shape
-                # random_start = 10*np.random.normal(size=(num, predict_size))
+                # random_start = .05*np.random.normal(size=(num, predict_size))
                 # inputs = jnp.array(random_start)
                 # fixed_ws = True
 
