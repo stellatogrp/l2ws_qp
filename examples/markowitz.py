@@ -84,10 +84,11 @@ def setup_probs(setup_cfg):
     a = cfg.a
     N_train, N_test = cfg.N_train, cfg.N_test
     N = N_train + N_test
-    std_mult = cfg.std_mult
+    # std_mult = cfg.std_mult
     pen_rets_min = cfg.pen_rets_min
     pen_rets_max = cfg.pen_rets_max
-    max_clip, min_clip = cfg.max_clip, cfg.min_clip
+    alpha = cfg.alpha
+    # max_clip, min_clip = cfg.max_clip, cfg.min_clip
 
     # p is the size of each feature vector (mu and pen_rets_factor)
     if pen_rets_max > pen_rets_min:
@@ -106,13 +107,13 @@ def setup_probs(setup_cfg):
         ret_cov_np = f"{orig_cwd}/data/portfolio_data/eod_ret_cov.npz"
     
     ret_cov_loaded = np.load(ret_cov_np)
-    Sigma = ret_cov_loaded['cov'] #+ np.eye(a) * 1e-4
+    Sigma = ret_cov_loaded['cov'] + np.eye(a) * 1e-4
     ret = ret_cov_loaded['ret'][1:, :a]
 
     
-    ret_mean = ret.mean(axis=0)
-    clipped_ret_mean_orig = np.clip(ret_mean, a_min=min_clip, a_max=max_clip)
-    clipped_ret_mean = clipped_ret_mean_orig * SCALE_FACTOR
+    # ret_mean = ret.mean(axis=0)
+    # clipped_ret_mean_orig = np.clip(ret_mean, a_min=min_clip, a_max=max_clip)
+    # clipped_ret_mean = clipped_ret_mean_orig * SCALE_FACTOR
 
     log.info('creating static canonicalization...')
     t0 = time.time()
@@ -154,15 +155,19 @@ def setup_probs(setup_cfg):
     pen_rets = np.zeros(N)
     scs_instances = []
 
-    mu_mat = SCALE_FACTOR * np.random.multivariate_normal(clipped_ret_mean_orig, Sigma, size=(N))
+    # mu_mat = SCALE_FACTOR * np.random.multivariate_normal(clipped_ret_mean_orig, Sigma, size=(N))
     # pdb.set_trace()
-
+    mu_mat = np.zeros((N, a))
+    T = ret.shape[0]
+    noise = np.sqrt(.02) * np.random.normal(size=(N, a))
+    
     for i in range(N):
         log.info(f"solving problem number {i}")
+        time_index = i % T
+        mu_mat[i, :] = SCALE_FACTOR * alpha * (ret[time_index, :] + noise[i, :])
         # mu_mat[i, :] = clipped_ret_mean * \
         #     (1 + std_mult*np.random.normal(size=(a))
         #      ) + std_mult *np.random.normal(size=(a))
-
 
         sample = np.random.rand(1) * (pen_rets_max -
                                       pen_rets_min) + pen_rets_min
@@ -172,8 +177,9 @@ def setup_probs(setup_cfg):
             thetas = thetas.at[i, a].set(pen_rets[i])
 
         # manual canon
+        c = -mu_mat[i, :] * pen_rets[i]
         manual_canon_dict = {'P': P_sparse, 'A': A_sparse,
-                             'b': b, 'c': -mu_mat[i, :] * pen_rets[i],
+                             'b': b, 'c': c,
                              'cones': cones_dict}
         scs_instance = SCSinstance(
             manual_canon_dict, solver, manual_canon=True)
@@ -184,6 +190,13 @@ def setup_probs(setup_cfg):
         s_stars = s_stars.at[i, :].set(scs_instance.s_star)
         q_mat = q_mat.at[i, :].set(scs_instance.q)
         solve_times[i] = scs_instance.solve_time
+
+        # input into our_scs
+        # P_jax, A_jax = jnp.array(P_sparse.todense()), jnp.array(A_sparse.todense())
+        # b_jax, c_jax = jnp.array(b), jnp.array(c)
+        # data = dict(P=P_jax, A=A_jax, b=b_jax, c=c_jax, cones=cones_dict)
+        # scs_jax(data, iters=1000)
+        # pdb.set_trace()
     
     # resave the data??
     # print('saving final data...', flush=True)
@@ -198,14 +211,22 @@ def setup_probs(setup_cfg):
     log.info(f"finished saving final data... took {save_time-t0}'")
 
     # save plot of first 5 solutions
-    for i in range(5):
-        plt.plot(x_stars[i, :])
+    for i in range(20):
+        plt.plot(x_stars[i, :], label=i)
+    if T < N:
+        plt.plot(x_stars[T, :], label=T)
+    plt.legend()
     plt.savefig('opt_solutions.pdf')
+    plt.clf()
 
     # save plot of first 5 parameters
     for i in range(5):
-        plt.plot(thetas[i, :])
+        plt.plot(thetas[i, :], label=i)
+    if T < N:
+        plt.plot(thetas[T, :], label=T)
+    plt.legend()
     plt.savefig('thetas.pdf')
+
 
 
 def static_canon(data, a):
@@ -230,7 +251,7 @@ def static_canon(data, a):
         ret_cov_np = f"{orig_cwd}/data/portfolio_data/eod_ret_cov.npz"
     
     ret_cov_loaded = np.load(ret_cov_np)
-    Sigma = ret_cov_loaded['cov'][:a, :a] #+ 1e-4 * np.eye(a)
+    Sigma = ret_cov_loaded['cov'][:a, :a] + 1e-4 * np.eye(a)
     n = a
     m = a + 1
 

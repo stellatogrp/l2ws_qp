@@ -14,13 +14,13 @@ pretrain:
   pretrain_iters: 2
 
 data:
-  datetime: '2022-12-07/00-11-31'
+  datetime: '' #'2022-12-07/00-11-31'
 
 a: 3000
 train_unrolls: 5
 eval_unrolls: 500
 eval_every_x_epochs: 3
-N_train: 50
+N_train: 10
 N_test: 10
-num_samples: 90
+num_samples: 9
 prediction_variable: w
