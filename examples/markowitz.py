@@ -117,7 +117,7 @@ def setup_probs(setup_cfg):
 
     log.info('creating static canonicalization...')
     t0 = time.time()
-    out_dict = static_canon(cfg.data, a)
+    out_dict = static_canon(cfg.data, a, cfg.idio_risk, cfg.scale_factor)
     t1 = time.time()
     log.info(f"finished static canonicalization - took {t1-t0} seconds")
 
