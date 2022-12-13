@@ -69,11 +69,19 @@ def nasdaq():
 
     short_ret_np = short_ret.to_numpy()
     cov_np = covariance.to_numpy()
+
+    # get factor model
+    U, S, VT = np.linalg.svd(cov_np)
+    pdb.set_trace()
+    factor = 15
+    S_factor = np.diag(S[:factor])
+    factor_cov = U[:, :factor] @ S_factor @ VT[:factor, :]
+
     # cov_np[cov_np > .001] = .001
     # cov_np[cov_np < -.001] = -.001
     filename = 'data/portfolio_data/eod_ret_cov.npz'
-    # pdb.set_trace()
-    np.savez(filename, ret=short_ret_np, cov=cov_np)
+    pdb.set_trace()
+    np.savez(filename, ret=short_ret_np, cov=factor_cov)
     
 def yahoo():
     '''

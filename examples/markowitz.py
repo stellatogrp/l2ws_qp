@@ -17,7 +17,7 @@ import os
 import scs
 import logging
 import yaml
-SCALE_FACTOR = 1e2
+# SCALE_FACTOR = 1e2
 log = logging.getLogger(__name__)
 
 
@@ -61,7 +61,7 @@ def run(run_cfg):
 
     pen_ret = 10**setup_cfg['pen_rets_min']
     a = setup_cfg['a']
-    static_dict = static_canon(setup_cfg['data'], a)
+    static_dict = static_canon(setup_cfg['data'], a, setup_cfg['idio_risk'], setup_cfg['scale_factor'])
     def get_q(theta):
         q = jnp.zeros(2*a + 1)
         q = q.at[:a].set(-theta * pen_ret)
@@ -104,10 +104,10 @@ def setup_probs(setup_cfg):
     elif cfg.data == 'nasdaq':
         ret_cov_np = f"{orig_cwd}/data/portfolio_data/ret_cov.npz"
     elif cfg.data == 'eod':
-        ret_cov_np = f"{orig_cwd}/data/portfolio_data/eod_ret_cov.npz"
+        ret_cov_np = f"{orig_cwd}/data/portfolio_data/eod_ret_cov_factor.npz"
     
     ret_cov_loaded = np.load(ret_cov_np)
-    Sigma = ret_cov_loaded['cov'] + np.eye(a) * 1e-4
+    Sigma = ret_cov_loaded['cov'] + np.eye(a) * cfg.idio_risk
     ret = ret_cov_loaded['ret'][1:, :a]
 
     
@@ -164,7 +164,7 @@ def setup_probs(setup_cfg):
     for i in range(N):
         log.info(f"solving problem number {i}")
         time_index = i % T
-        mu_mat[i, :] = SCALE_FACTOR * alpha * (ret[time_index, :] + noise[i, :])
+        mu_mat[i, :] = cfg.scale_factor * alpha * (ret[time_index, :] + noise[i, :])
         # mu_mat[i, :] = clipped_ret_mean * \
         #     (1 + std_mult*np.random.normal(size=(a))
         #      ) + std_mult *np.random.normal(size=(a))
@@ -229,7 +229,7 @@ def setup_probs(setup_cfg):
 
 
 
-def static_canon(data, a):
+def static_canon(data, a, idio_risk, scale_factor):
     '''
     This method produces the parts of each problem that does not change
     i.e. P, A, b, cones
@@ -251,12 +251,12 @@ def static_canon(data, a):
         ret_cov_np = f"{orig_cwd}/data/portfolio_data/eod_ret_cov.npz"
     
     ret_cov_loaded = np.load(ret_cov_np)
-    Sigma = ret_cov_loaded['cov'][:a, :a] + 1e-4 * np.eye(a)
+    Sigma = ret_cov_loaded['cov'][:a, :a] + idio_risk * np.eye(a)
     n = a
     m = a + 1
 
     # scale Sigma
-    Sigma = SCALE_FACTOR * Sigma
+    Sigma = scale_factor * Sigma
 
     # do the manual canonicalization
     b = np.zeros(a + 1)
