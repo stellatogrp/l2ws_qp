@@ -248,7 +248,7 @@ def static_canon(data, a, idio_risk, scale_factor):
     elif data == 'nasdaq':
         ret_cov_np = f"{orig_cwd}/data/portfolio_data/ret_cov.npz"
     elif data == 'eod':
-        ret_cov_np = f"{orig_cwd}/data/portfolio_data/eod_ret_cov.npz"
+        ret_cov_np = f"{orig_cwd}/data/portfolio_data/eod_ret_cov_factor.npz"
     
     ret_cov_loaded = np.load(ret_cov_np)
     Sigma = ret_cov_loaded['cov'][:a, :a] + idio_risk * np.eye(a)
