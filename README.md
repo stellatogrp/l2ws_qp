@@ -6,7 +6,7 @@ This repository is by
 and [Bartolomeo Stellato](https://stellato.io/),
 and contains the Python source code to
 reproduce the experiments in our paper
-"[End-to-End Learning to Warm-Start for Real-Time Quadratic Optimization]()."
+"[End-to-End Learning to Warm-Start for Real-Time Quadratic Optimization](https://arxiv.org/pdf/2212.08260.pdf)."
 
 If you find this repository helpful in your publications,
 please consider citing our paper.
