@@ -1,10 +1,11 @@
+import functools
+import os
+
+import jax.numpy as jnp
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import os
-import matplotlib.pyplot as plt
-from jax import random, jit
-import jax.numpy as jnp
-import functools
+from jax import jit, random
 
 
 def save_nonconvex_result_2_csv(X_stars, opt_vals, times, MIPgaps,

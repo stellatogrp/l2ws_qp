@@ -1,17 +1,17 @@
 import copy
 import functools
-from jax import jit, vmap
-import jax.numpy as jnp
-import jax
-from jax import random
-import optax
-import time
-from jaxopt import OptaxSolver
-from utils.nn_utils import init_network_params, \
-    predict_y
 import pickle as pkl
+import time
+
+import jax
+import jax.numpy as jnp
 import numpy as np
+import optax
 import pandas as pd
+from jax import jit, random, vmap
+from jaxopt import OptaxSolver
+
+from utils.nn_utils import init_network_params, predict_y
 
 
 class L2WSmodel(object):

@@ -1,8 +1,10 @@
 import sys
+
+import hydra
+
 import examples.markowitz as markowitz
 import examples.osc_mass as osc_mass
 import examples.vehicle as vehicle
-import hydra
 from utils.data_utils import copy_data_file, recover_last_datetime
 
 

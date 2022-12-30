@@ -1,9 +1,10 @@
-import numpy as np
-import jax.numpy as jnp
-from scipy.sparse import csc_matrix
-import jax.scipy as jsp
 import logging
+
+import jax.numpy as jnp
+import jax.scipy as jsp
+import numpy as np
 from scipy import sparse
+from scipy.sparse import csc_matrix
 
 log = logging.getLogger(__name__)
 

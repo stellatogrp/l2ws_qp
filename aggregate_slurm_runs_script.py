@@ -1,16 +1,19 @@
 import functools
-import sys
-import hydra
 import os
+import sys
+import time
+
+import hydra
 import jax.numpy as jnp
+import numpy as np
+import yaml
 from jax import jit, vmap
+
 import examples.markowitz as markowitz
 import examples.osc_mass as osc_mass
 import examples.vehicle as vehicle
-import yaml
-import numpy as np
-import time
 from utils.data_utils import recover_last_datetime
+
 # from l2ws.scs_problem import SCSinstance, scs_jax
 
 

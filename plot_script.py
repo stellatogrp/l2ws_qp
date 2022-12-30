@@ -1,11 +1,14 @@
-import matplotlib.pyplot as plt
-from pandas import read_csv
 import sys
-import yaml
+
 import hydra
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import yaml
+from pandas import read_csv
+
 from utils.data_utils import recover_last_datetime
+
 plt.rcParams.update({
     "text.usetex": True,
     "font.family": "serif",   # For talks, use sans-serif

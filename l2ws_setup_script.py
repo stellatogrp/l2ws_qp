@@ -1,8 +1,10 @@
 import sys
+
+import hydra
+
 import examples.markowitz as markowitz
 import examples.osc_mass as osc_mass
 import examples.vehicle as vehicle
-import hydra
 
 
 @hydra.main(config_path='configs/markowitz', config_name='markowitz_setup.yaml')

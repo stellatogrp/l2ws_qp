@@ -1,16 +1,18 @@
 import csv
 import os
+
+import hydra
+import jax
+import jax.numpy as jnp
+import jax.scipy as jsp
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from l2ws.l2ws_model import L2WSmodel
-import jax.numpy as jnp
-import jax.scipy as jsp
-from jax import jit
-import hydra
-import jax
-from jax import random
+from jax import jit, random
 from scipy.spatial import distance_matrix
+
+from l2ws.l2ws_model import L2WSmodel
+
 plt.rcParams.update({
     "text.usetex": True,
     "font.family": "serif",   # For talks, use sans-serif

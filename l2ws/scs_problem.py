@@ -1,11 +1,12 @@
-import jax.scipy as jsp
-import jax.numpy as jnp
-import cvxpy as cp
 import pdb
-from matplotlib import pyplot as plt
+
+import cvxpy as cp
+import jax
+import jax.numpy as jnp
+import jax.scipy as jsp
 import numpy as np
 from jax import jit, random
-import jax
+from matplotlib import pyplot as plt
 
 
 class SCSinstance(object):
