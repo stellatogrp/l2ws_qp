@@ -1,18 +1,10 @@
-from functools import partial
-import nntplib
-from tabnanny import verbose
 import jax.scipy as jsp
 import jax.numpy as jnp
 import cvxpy as cp
 import pdb
-import time
 from matplotlib import pyplot as plt
-import scipy
 import numpy as np
-from scipy.sparse import coo_matrix, bmat
-import scs
 from jax import jit, random
-import functools
 import jax
 
 
@@ -71,17 +63,6 @@ class SCSinstance(object):
 
 
 def scs_jax(data, iters=5000):
-    ##### QUICK TEST
-    # A = jnp.array([[1, 2],
-    #     [-1, 3]])
-    # def linoperator(v):
-    #     return A@v
-    # rhs = jnp.ones(2)
-    # out_cg, info = jsp.sparse.linalg.cg(linoperator, rhs, tol=1e-09)
-    # out_lin_solve = jnp.linalg.solve(A, rhs)
-    # pdb.set_trace()
-    #####
-
     P, A = data['P'], data['A']
     c, b = data['c'], data['b']
     cones = data['cones']
@@ -102,40 +83,13 @@ def scs_jax(data, iters=5000):
         proj = jnp.clip(input[n+zero_cone_int:], a_min=0)
         return jnp.concatenate([input[:n+zero_cone_int], proj])
 
-    M_plus_I = M + jnp.eye(n + m)
-    mat_inv = jnp.linalg.inv(M_plus_I)
+    # M_plus_I = M + jnp.eye(n + m)
+    # mat_inv = jnp.linalg.inv(M_plus_I)
 
     @jit
     def lin_sys_solve(rhs):
-        return mat_inv @ rhs
-        # return jsp.linalg.lu_solve(algo_factor, rhs)
-
-    # lin_op = lambda x: A@x
-    # def lin_op(vec):
-    #     return P@vec + 3*vec
-        # return M_plus_I @ vec
-        # x, y = vec[:n], vec[n:]
-        # Px = P @ x
-        # split = int(m/2)
-        # top = Px + y[:split] - y[split:]
-        # bottom = jnp.concatenate([-x, x]) + y
-        # out = jnp.concatenate([top, bottom])
-        # return out
-
-    # @jit
-    # split = int(m/2)
-    # def lin_sys_solve(rhs):
-        # rx = rhs[:n]
-        # ry = rhs[n:]
-        # rhs_x = rx + ry[:split] - ry[split:]
-        # x_sol, info = jsp.sparse.linalg.cg(lin_op, rhs_x, tol=1e-09)
-        # sol = jsp.sparse.linalg.cg(M_plus_I, rhs, tol=1e-09)[0]
-        # Ax = jnp.concatenate([x_sol, -x_sol])
-        # y_sol = Ax - rhs[n:]
-        # sol = jnp.concatenate([x_sol, y_sol])
-        # pdb.set_trace()
-        # return sol
-        # return jsp.linalg.lu_solve(algo_factor, rhs)
+        # return mat_inv @ rhs
+        return jsp.linalg.lu_solve(algo_factor, rhs)
 
     key = random.PRNGKey(0)
     if 'x' in data.keys():
@@ -165,8 +119,8 @@ def scs_jax(data, iters=5000):
         sp = v[n:]
 
         # get the residuals
-        pr = jnp.linalg.norm(A @ xp + sp - b, ord=np.inf) #, ord='inf')
-        dr = jnp.linalg.norm(A.T @ yd + P @ xp + c, ord=np.inf) #, ord='inf')
+        pr = jnp.linalg.norm(A @ xp + sp - b, ord=np.inf)
+        dr = jnp.linalg.norm(A.T @ yd + P @ xp + c, ord=np.inf)
         dg = jax.lax.abs(xp @ P @ xp + c @ xp + b @ yd)
 
         if i % 10 == 0:
@@ -207,8 +161,8 @@ def fixed_point(z_init, q, lin_sys_solve, proj):
     # pdb.set_trace()
     y_tilde = (2*x - z_init)
     y = proj(y_tilde)
-    
-    z = z_init +1.0*( y - x)
+
+    z = z_init + 1.0 * (y - x)
     return z, x, y
 
 

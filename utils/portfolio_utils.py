@@ -1,22 +1,12 @@
-from fileinput import filename
 import numpy as np
 import pandas as pd
-import csv
-import quandl
 import pdb
-import datetime as dt
-import os
-import time
-from get_all_tickers import get_tickers as gt
-import yfinance as yf
-from yahoofinancials import YahooFinancials
-import matplotlib.pyplot as plt
-# quandl.ApiConfig.api_key = os.environ['QUANDL_API_KEY']
 
 
 def main():
     nasdaq()
     # yahoo()
+
 
 def nasdaq():
     # stacked_filename = 'data/portfolio_data/WIKI_prices_all.csv'
@@ -54,10 +44,9 @@ def nasdaq():
     # fill in missing entries
     close_data_shorter = close_data_shorter.fillna(close_data_shorter.mean())
     diff = -close_data_shorter.diff()
-    diff2 = diff.iloc[1:,:]
-    ret =  diff2 / close_data_shorter.iloc[:-1,:]
+    diff2 = diff.iloc[1:, :]
+    ret = diff2 / close_data_shorter.iloc[:-1, :]
     ret = ret.fillna(ret.mean())
-    
 
     short_ret = ret.iloc[:, :3000]
     # short_ret = short_ret.clip(lower=-.5, upper=.5)
@@ -82,29 +71,6 @@ def nasdaq():
     filename = 'data/portfolio_data/eod_ret_cov.npz'
     pdb.set_trace()
     np.savez(filename, ret=short_ret_np, cov=factor_cov)
-    
-def yahoo():
-    '''
-    get all tickers
-    '''
-    tickers_df = pd.read_csv('data/portfolio_data/yahoo_tickers.csv')
-    tickers_list_ = tickers_df.values.tolist()
-    tickers_list = [tt[0] for tt in tickers_list_]
-    data1 = yf.download(tickers_list[:2000], start="2020-01-01", end="2021-01-01")
-    data2 = yf.download(tickers_list[2000:], start="2020-01-01", end="2021-01-01")
-    data = data1.append(data2, ignore_index=True)
-    close_data_all = data['Adj Close']
-    close_data = close_data_all.dropna(axis=1, how='all')
-    close_data = close_data.fillna(close_data.mean())
-    
-    ret = close_data.diff() / close_data
-    covariance = ret.cov()
-
-    ret_np = ret.to_numpy()
-    cov_np = covariance.to_numpy()
-    filename = 'data/portfolio_data/yahoo_ret_cov.npz'
-
-    np.savez(filename, ret=ret_np, cov=cov_np)
 
 
 if __name__ == '__main__':

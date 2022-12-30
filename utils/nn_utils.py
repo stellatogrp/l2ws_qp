@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import os
-import pdb
 import matplotlib.pyplot as plt
 from jax import random, jit
 import jax.numpy as jnp
@@ -59,7 +58,7 @@ def save_nonconvex_result_2_csv(X_stars, opt_vals, times, MIPgaps,
     if slurm_idx is None:
         if warm:
             file_name = 'data/' + problem_type + '/experiment_' + \
-                str(save_idx) + '/warm_soln.csv' # str(num_experiments) + '/warm_soln.csv'
+                str(save_idx) + '/warm_soln.csv'
 
         else:
             file_name = 'data/' + problem_type + '/experiment_' + \
@@ -103,8 +102,6 @@ def load_nonconvex_result_csv(problem_type, experiment_num, slurm_idx=0, warm=Fa
     MIPgaps = data[:, 3]
     X_stars = data[:, 4:]
     return X_stars, opt_vals, times, MIPgaps
-
-
 
 
 def plot_path_planning(centers, radii, x, squares=True):

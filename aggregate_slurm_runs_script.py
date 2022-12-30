@@ -3,7 +3,6 @@ import sys
 import hydra
 import os
 import jax.numpy as jnp
-import pdb
 from jax import jit, vmap
 import examples.markowitz as markowitz
 import examples.osc_mass as osc_mass
@@ -13,6 +12,7 @@ import numpy as np
 import time
 from utils.data_utils import recover_last_datetime
 # from l2ws.scs_problem import SCSinstance, scs_jax
+
 
 @hydra.main(config_path='configs/markowitz', config_name='markowitz_agg.yaml')
 def markowitz_main(cfg):
@@ -30,7 +30,6 @@ def markowitz_main(cfg):
         datetimes = [last_datetime]
 
         cfg = {'datetimes': datetimes}
-        
         # save the datetime to we can recover
         with open('agg_datetimes.yaml', 'w') as file:
             yaml.dump(cfg, file)
@@ -40,8 +39,8 @@ def markowitz_main(cfg):
     example = 'markowitz'
 
     # the location specified in the aggregation cfg file
-    
-    data_yaml_filename = f"{orig_cwd}/outputs/{example}/data_setup_outputs/{datetime0}/.hydra/config.yaml"
+    dt0 = datetime0
+    data_yaml_filename = f"{orig_cwd}/outputs/{example}/data_setup_outputs/{dt0}/.hydra/config.yaml"
 
     # read the yaml file
     with open(data_yaml_filename, "r") as stream:
@@ -53,8 +52,10 @@ def markowitz_main(cfg):
     pen_ret = 10**setup_cfg['pen_rets_min']
     # extract M
     a = setup_cfg['a']
-    static_dict = markowitz.static_canon(setup_cfg['data'], a, setup_cfg['idio_risk'], setup_cfg['scale_factor'])
+    static_dict = markowitz.static_canon(
+        setup_cfg['data'], a, setup_cfg['idio_risk'], setup_cfg['scale_factor'])
     M = static_dict['M']
+
     def get_q(theta):
         q = jnp.zeros(2*a + 1)
         q = q.at[:a].set(-theta * pen_ret)
@@ -65,7 +66,6 @@ def markowitz_main(cfg):
     with open('data_setup_copied.yaml', 'w') as file:
         yaml.dump(setup_cfg, file)
     save_aggregate(static_flag, M, datetimes, example, get_q_batch)
-    
 
 
 @hydra.main(config_path='configs/osc_mass', config_name='osc_mass_agg.yaml')
@@ -86,22 +86,23 @@ def osc_mass_main(cfg):
         datetimes = [last_datetime]
 
         cfg = {'datetimes': datetimes}
-        
+
     # save the datetime to we can recover
     with open('agg_datetimes.yaml', 'w') as file:
         yaml.dump(cfg, file)
 
     datetime0 = datetimes[0]
 
-    folder = f"{orig_cwd}/outputs/{example}/data_setup_outputs/{datetime0}"
-    folder_entries = os.listdir(folder)
-    entry = folder_entries[0]
+    # folder = f"{orig_cwd}/outputs/{example}/data_setup_outputs/{datetime0}"
+    # folder_entries = os.listdir(folder)
+    # entry = folder_entries[0]
 
     '''
     the next line is not right -- need to get the setup cfg file from
     '''
     #    the location specified in the aggregation cfg file
-    data_yaml_filename = f"{orig_cwd}/outputs/{example}/data_setup_outputs/{datetime0}/.hydra/config.yaml"
+    dt0 = datetime0
+    data_yaml_filename = f"{orig_cwd}/outputs/{example}/data_setup_outputs/{dt0}/.hydra/config.yaml"
 
     # read the yaml file
     with open(data_yaml_filename, "r") as stream:
@@ -122,24 +123,24 @@ def osc_mass_main(cfg):
         yaml.dump(setup_cfg, file)
 
     static_dict = osc_mass.static_canon(T, nx, nu,
-                                    state_box,
-                                    control_box,
-                                    Q_val,
-                                    QT_val,
-                                    R_val,
-                                    Ad=Ad,
-                                    Bd=Bd)
+                                        state_box,
+                                        control_box,
+                                        Q_val,
+                                        QT_val,
+                                        R_val,
+                                        Ad=Ad,
+                                        Bd=Bd)
     A_sparse = static_dict['A_sparse']
     m, n = A_sparse.shape
     get_q_single = functools.partial(osc_mass.single_q,
-                                        m=m,
-                                        n=n,
-                                        T=T,
-                                        nx=nx,
-                                        nu=nu,
-                                        state_box=state_box,
-                                        control_box=control_box,
-                                        A_dynamics=Ad)
+                                     m=m,
+                                     n=n,
+                                     T=T,
+                                     nx=nx,
+                                     nu=nu,
+                                     state_box=state_box,
+                                     control_box=control_box,
+                                     A_dynamics=Ad)
     get_q = vmap(get_q_single, in_axes=0, out_axes=0)
     M = static_dict['M']
     static_flag = True
@@ -167,15 +168,16 @@ def vehicle_main(cfg):
         yaml.dump(cfg, file)
     datetime0 = datetimes[0]
     example = 'vehicle'
-    folder = f"{orig_cwd}/outputs/{example}/data_setup_outputs/{datetime0}"
-    folder_entries = os.listdir(folder)
-    entry = folder_entries[0]
+    # folder = f"{orig_cwd}/outputs/{example}/data_setup_outputs/{datetime0}"
+    # folder_entries = os.listdir(folder)
+    # entry = folder_entries[0]
 
     '''
     the next line is not right -- need to get the setup cfg file from
     '''
     #    the location specified in the aggregation cfg file
-    data_yaml_filename = f"{orig_cwd}/outputs/{example}/data_setup_outputs/{datetime0}/.hydra/config.yaml"
+    dt0 = datetime0
+    data_yaml_filename = f"{orig_cwd}/outputs/{example}/data_setup_outputs/{dt0}/.hydra/config.yaml"
 
     # read the yaml file
     with open(data_yaml_filename, "r") as stream:
@@ -259,7 +261,6 @@ def save_aggregate(static_flag, M, datetimes, example, get_q):
     q_mat_list = []
     x_stars_list = []
     y_stars_list = []
-    matrix_invs_list = []
     M_tensor_list = []
 
     for datetime in datetimes:
@@ -285,7 +286,7 @@ def save_aggregate(static_flag, M, datetimes, example, get_q):
                 q_mat_list.append(q_mat)
                 x_stars_list.append(x_stars)
                 y_stars_list.append(y_stars)
-        
+
     thetas = jnp.vstack(thetas_list)
     x_stars = jnp.vstack(x_stars_list)
     y_stars = jnp.vstack(y_stars_list)
@@ -307,17 +308,17 @@ def save_aggregate(static_flag, M, datetimes, example, get_q):
         @jit
         def inv(M_in):
             return jnp.linalg.inv(M_in + jnp.eye(m+n))
-        batch_inv  = vmap(inv, in_axes=(0), out_axes=(0))
+        batch_inv = vmap(inv, in_axes=(0), out_axes=(0))
         print('inverting...')
         t0 = time.time()
 
         matrix_invs_tensor = batch_inv(M_tensors)
-        
+
         t1 = time.time()
         print('inversion time', t1 - t0)
         print('M tensor shape', M_tensor.shape)
         print('q mat shape', q_mat.shape)
-        
+
         M_tensor = jnp.vstack(M_tensor_list)
         w_stars = batch_get_w_star_Mq(x_stars, y_stars, M_tensor, q_mat)
         jnp.savez(output_filename,

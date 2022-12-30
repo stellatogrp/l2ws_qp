@@ -2,6 +2,7 @@ import os
 import yaml
 import hydra
 
+
 def recover_last_datetime(orig_cwd, example, stage):
     '''
     stage should be either
@@ -10,7 +11,7 @@ def recover_last_datetime(orig_cwd, example, stage):
     3. train
     '''
     folder = f"{orig_cwd}/outputs/{example}/{stage}_outputs/"
-        
+
     date_entries = os.listdir(folder)
     date_entries.sort()
     last_date = date_entries[len(date_entries)-1]
@@ -23,10 +24,12 @@ def recover_last_datetime(orig_cwd, example, stage):
     last_datetime = f"{last_date}/{last_time}"
     return last_datetime
 
+
 def copy_data_file(example, datetime):
     orig_cwd = hydra.utils.get_original_cwd()
-    data_yaml_filename = f"{orig_cwd}/outputs/{example}/aggregate_outputs/{datetime}/data_setup_copied.yaml"
-    
+    dt, ex = datetime, example
+    data_yaml_filename = f"{orig_cwd}/outputs/{ex}/aggregate_outputs/{dt}/data_setup_copied.yaml"
+
     # read the yaml file
     with open(data_yaml_filename, "r") as stream:
         try:

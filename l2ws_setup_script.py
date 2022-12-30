@@ -3,17 +3,13 @@ import examples.markowitz as markowitz
 import examples.osc_mass as osc_mass
 import examples.vehicle as vehicle
 import hydra
-import pdb
-import cvxpy as cp
-import scipy
-import numpy as np
 
 
 @hydra.main(config_path='configs/markowitz', config_name='markowitz_setup.yaml')
 def main_setup_markowitz(cfg):
     markowitz.setup_probs(cfg)
 
-    
+
 @hydra.main(config_path='configs/osc_mass', config_name='osc_mass_setup.yaml')
 def main_setup_osc_mass(cfg):
     osc_mass.setup_probs(cfg)

@@ -11,8 +11,6 @@ from utils.nn_utils import init_network_params, \
     predict_y
 import pickle as pkl
 import numpy as np
-import matplotlib.pyplot as plt
-import pdb
 import pandas as pd
 
 
@@ -97,16 +95,16 @@ class L2WSmodel(object):
                           'diff_required': False
                           }
         fixed_ws_dict = {'static_flag': self.static_flag,
-                          'lin_sys_solve': lin_sys_solve,
-                          'proj': proj,
-                          'unrolls': self.eval_unrolls,
-                          'm': self.m,
-                          'n': self.n,
-                          'prediction_variable': 'x',
-                          'M_static': self.static_M,
-                          'factor_static': self.static_algo_factor,
-                          'diff_required': False
-                          }
+                         'lin_sys_solve': lin_sys_solve,
+                         'proj': proj,
+                         'unrolls': self.eval_unrolls,
+                         'm': self.m,
+                         'n': self.n,
+                         'prediction_variable': 'x',
+                         'M_static': self.static_M,
+                         'factor_static': self.static_algo_factor,
+                         'diff_required': False
+                         }
         self.loss_fn_train = create_loss_fn(train_loss_dict)
         self.loss_fn_eval = create_loss_fn(eval_loss_dict)
 
@@ -134,11 +132,10 @@ class L2WSmodel(object):
         self.saveable_model['proxf'] = None
 
         self.train_data = []
-        
+
         self.state = self.optimizer.init_state(self.params)
         self.tr_losses_batch = []
         self.te_losses = []
-        
 
     def pretrain(self, num_iters, stepsize=.001, method='adam', df_pretrain=None):
         # create pretrain function
@@ -230,7 +227,7 @@ class L2WSmodel(object):
         t1 = time.time()
         time_per_batch = (t1 - t0)
         print('time per batch', time_per_batch)
-        train_out = self.state.aux
+        # train_out = self.state.aux
 
         print(
             f"[Step {self.state.iter_num}] train loss: {self.state.value:.6f}")
@@ -288,9 +285,8 @@ class L2WSmodel(object):
         time_per_prob = (time.time() - test_time0)/num_probs
         print('eval time per prob', time_per_prob)
         print(f"[Epoch {self.epoch}] [k {k}] {tag} loss: {loss:.6f}")
-        
-        return loss, out, time_per_prob
 
+        return loss, out, time_per_prob
 
     def save(self):
         '''
@@ -319,12 +315,12 @@ class L2WSmodel(object):
             df.to_csv(self.work_dir + 'results_test_data.csv')
 
 
-
 def create_loss_fn(input_dict):
     static_flag = input_dict['static_flag']
     lin_sys_solve, proj = input_dict['lin_sys_solve'], input_dict['proj']
-    unrolls = input_dict['unrolls']
-    m, n = input_dict['m'], input_dict['n']
+    # unrolls = input_dict['unrolls']
+    # m, n = input_dict['m'], input_dict['n']
+    n = input_dict['n']
     prediction_variable = input_dict['prediction_variable']
     diff_required = input_dict['diff_required']
 
@@ -344,7 +340,6 @@ def create_loss_fn(input_dict):
     def predict(params, input, q, iters, factor, M):
         P, A = M[:n, :n], -M[n:, :n]
         b, c = q[n:], q[:n]
-
 
         if prediction_variable == 'w':
             uu = predict_y(params, input)
@@ -374,7 +369,6 @@ def create_loss_fn(input_dict):
             z, iter_losses = out
         else:
             def _fp(i, val):
-                MM = M
                 z, loss_vec, primal_residuals, dual_residuals = val
                 z_next, u, v = fixed_point(z, factor, q)
                 diff = jnp.linalg.norm(z_next - z)
@@ -391,7 +385,7 @@ def create_loss_fn(input_dict):
 
         # unroll 1 more time for the loss
         u_tilde = lin_sys_solve(factor, z - q)
-        u_temp = 2*u_tilde - z
+        u_temp = 2 * u_tilde - z
         u = proj(u_temp)
         z_next = z + u - u_tilde
         loss = jnp.linalg.norm(z_next - z)
@@ -415,7 +409,6 @@ def create_loss_fn(input_dict):
         batch_predict = vmap(predict_final, in_axes=(
             None, 0, 0, None), out_axes=out_axes)
 
-        # @functools.partial(jax.jit, static_argnums=(3,))
         def loss_fn(params, inputs, q, iters):
             if diff_required:
                 losses, iter_losses, out = batch_predict(
@@ -432,7 +425,7 @@ def create_loss_fn(input_dict):
         batch_predict = vmap(predict, in_axes=(
             None, 0, 0, None, 0, 0), out_axes=out_axes)
 
-        @functools.partial(jax.jit, static_argnums=(5,))
+        @functools.partial(jit, static_argnums=(5,))
         def loss_fn(params, inputs, factor, M, q, iters):
             if diff_required:
                 losses, iter_losses, out = batch_predict(

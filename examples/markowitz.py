@@ -1,15 +1,10 @@
 import hydra
-import cvxpy as cp
-from jax import linear_transpose, vmap
-import pandas as pd
-from pandas import read_csv
+from jax import vmap
 from l2ws.scs_problem import SCSinstance, scs_jax
 import numpy as np
-import pdb
 from l2ws.launcher import Workspace
-from scipy import sparse
 import jax.numpy as jnp
-from scipy.sparse import coo_matrix, bmat, csc_matrix
+from scipy.sparse import csc_matrix
 import jax.scipy as jsp
 import time
 import matplotlib.pyplot as plt
@@ -44,12 +39,12 @@ def run(run_cfg):
 
     it will create the l2a_model
     '''
-    
-   
+
     datetime = run_cfg.data.datetime
     orig_cwd = hydra.utils.get_original_cwd()
     example = 'markowitz'
-    data_yaml_filename = f"{orig_cwd}/outputs/{example}/aggregate_outputs/{datetime}/data_setup_copied.yaml"
+    dt, ex = datetime, example
+    data_yaml_filename = f"{orig_cwd}/outputs/{ex}/aggregate_outputs/{dt}/data_setup_copied.yaml"
 
     # read the yaml file
     with open(data_yaml_filename, "r") as stream:
@@ -61,7 +56,9 @@ def run(run_cfg):
 
     pen_ret = 10**setup_cfg['pen_rets_min']
     a = setup_cfg['a']
-    static_dict = static_canon(setup_cfg['data'], a, setup_cfg['idio_risk'], setup_cfg['scale_factor'])
+    static_dict = static_canon(
+        setup_cfg['data'], a, setup_cfg['idio_risk'], setup_cfg['scale_factor'])
+
     def get_q(theta):
         q = jnp.zeros(2*a + 1)
         q = q.at[:a].set(-theta * pen_ret)
@@ -105,12 +102,11 @@ def setup_probs(setup_cfg):
         ret_cov_np = f"{orig_cwd}/data/portfolio_data/ret_cov.npz"
     elif cfg.data == 'eod':
         ret_cov_np = f"{orig_cwd}/data/portfolio_data/eod_ret_cov_factor.npz"
-    
+
     ret_cov_loaded = np.load(ret_cov_np)
-    Sigma = ret_cov_loaded['cov'] + np.eye(a) * cfg.idio_risk
+    # Sigma = ret_cov_loaded['cov'] + np.eye(a) * cfg.idio_risk
     ret = ret_cov_loaded['ret'][1:, :a]
 
-    
     # ret_mean = ret.mean(axis=0)
     # clipped_ret_mean_orig = np.clip(ret_mean, a_min=min_clip, a_max=max_clip)
     # clipped_ret_mean = clipped_ret_mean_orig * SCALE_FACTOR
@@ -160,7 +156,7 @@ def setup_probs(setup_cfg):
     mu_mat = np.zeros((N, a))
     T = ret.shape[0]
     noise = np.sqrt(.02) * np.random.normal(size=(N, a))
-    
+
     for i in range(N):
         log.info(f"solving problem number {i}")
         time_index = i % T
@@ -197,7 +193,7 @@ def setup_probs(setup_cfg):
         # data = dict(P=P_jax, A=A_jax, b=b_jax, c=c_jax, cones=cones_dict)
         # scs_jax(data, iters=1000)
         # pdb.set_trace()
-    
+
     # resave the data??
     # print('saving final data...', flush=True)
     log.info('saving final data...')
@@ -228,13 +224,12 @@ def setup_probs(setup_cfg):
     plt.savefig('thetas.pdf')
 
 
-
 def static_canon(data, a, idio_risk, scale_factor):
     '''
     This method produces the parts of each problem that does not change
     i.e. P, A, b, cones
 
-    It creates the matrix 
+    It creates the matrix
     M = [P A.T
         -A 0]
 
@@ -249,7 +244,7 @@ def static_canon(data, a, idio_risk, scale_factor):
         ret_cov_np = f"{orig_cwd}/data/portfolio_data/ret_cov.npz"
     elif data == 'eod':
         ret_cov_np = f"{orig_cwd}/data/portfolio_data/eod_ret_cov_factor.npz"
-    
+
     ret_cov_loaded = np.load(ret_cov_np)
     Sigma = ret_cov_loaded['cov'][:a, :a] + idio_risk * np.eye(a)
     n = a
@@ -314,9 +309,11 @@ code for automatic canon
 # m, n = prob.get_problem_data(cp.SCS)[0]['A'].shape
 '''
 
+
 def our_scs():
     a = 3000
-    m, n = a+1, a
+    m = a + 1
+    # m, n = a+1, a
     # Sigma, M = out_dict['Sigma'], out_dict['M']
     # ATA_factor, algo_factor = out_dict['ATA_factor'], out_dict['algo_factor']
     # cones_array, A_sparse = out_dict['cones_array'], out_dict['A_sparse']
@@ -327,8 +324,8 @@ def our_scs():
     # cones_dict = dict(z=1, l=a)
     # pdb.set_trace()
 
-    ret_cov_np = f"data/portfolio_data/ret_cov.npz"
-    #ret_cov_np = f"{orig_cwd}/data/portfolio_data/ret_cov.npz"
+    ret_cov_np = "data/portfolio_data/ret_cov.npz"
+    # ret_cov_np = f"{orig_cwd}/data/portfolio_data/ret_cov.npz"
     ret_cov_loaded = np.load(ret_cov_np)
     P = ret_cov_loaded['cov'][:a, :a] + 1e-6 * np.eye(a)
     ret = ret_cov_loaded['ret'][:, :a]

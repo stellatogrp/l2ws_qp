@@ -1,16 +1,10 @@
-from cProfile import label
 import matplotlib.pyplot as plt
 from pandas import read_csv
 import sys
-import jax.numpy as jnp
-import pdb
 import yaml
-import os
-from pathlib import Path
 import hydra
 import numpy as np
 import pandas as pd
-import math
 from utils.data_utils import recover_last_datetime
 plt.rcParams.update({
     "text.usetex": True,
@@ -40,7 +34,6 @@ def vehicle_plot_eval_iters(cfg):
 @hydra.main(config_path='configs/all', config_name='plot.yaml')
 def plot_l4dc(cfg):
     orig_cwd = hydra.utils.get_original_cwd()
-    examples = []
     fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(18, 6), sharey=True)
     axes[0].set_yscale('log')
     axes[1].set_yscale('log')
@@ -54,13 +47,6 @@ def plot_l4dc(cfg):
     axes[0].plot(om_nws, 'm-.')
     example = 'mpc'
     for datetime in cfg_om.output_datetimes:
-        # train_yaml_filename = f"{orig_cwd}/outputs/{example}/train_outputs/{datetime}/.hydra/config.yaml"
-        # with open(train_yaml_filename, "r") as stream:
-        #     try:
-        #         out_dict = yaml.safe_load(stream)
-        #     except yaml.YAMLError as exc:
-        #         print(exc)
-        # k = int(out_dict['train_unrolls'])
         k = get_k(orig_cwd, example, datetime)
         curr_data = get_data(example, datetime, 'last', cfg_om.eval_iters)
 
@@ -108,8 +94,8 @@ def plot_l4dc(cfg):
     fig.tight_layout()
 
 
-def get_k(orig_cwd, example, datetime):
-    train_yaml_filename = f"{orig_cwd}/outputs/{example}/train_outputs/{datetime}/.hydra/config.yaml"
+def get_k(orig_cwd, example, dt):
+    train_yaml_filename = f"{orig_cwd}/outputs/{example}/train_outputs/{dt}/.hydra/config.yaml"
     with open(train_yaml_filename, "r") as stream:
         try:
             out_dict = yaml.safe_load(stream)
@@ -154,52 +140,54 @@ def plot_eval_iters(example, cfg):
     naive_ws_datetime = cfg.naive_ws_datetime
     if naive_ws_datetime == '':
         naive_ws_datetime = recover_last_datetime(orig_cwd, example, 'train')
-    
+
     accs = cfg.accuracies
     df_acc = pd.DataFrame()
     df_acc['accuracies'] = np.array(accs)
-    
+
     '''
     no learning
     '''
-    no_learning_path = f"{orig_cwd}/outputs/{example}/train_outputs/{no_learning_datetime}/iters_compared.csv"
+    nl_dt = no_learning_datetime
+    no_learning_path = f"{orig_cwd}/outputs/{example}/train_outputs/{nl_dt}/iters_compared.csv"
     no_learning_df = read_csv(no_learning_path)
     last_column = no_learning_df['no_train']
     plt.plot(last_column[:eval_iters], 'k-.', label='no learning')
-    second_derivs_no_learn = second_derivative_fn(np.log(last_column[:eval_iters]))
     df_acc = update_acc(df_acc, accs, 'no_learn', last_column[:eval_iters])
 
     '''
     naive warm start
     '''
-    naive_ws_path = f"{orig_cwd}/outputs/{example}/train_outputs/{naive_ws_datetime}/iters_compared.csv"
+    nws_dt = naive_ws_datetime
+    naive_ws_path = f"{orig_cwd}/outputs/{example}/train_outputs/{nws_dt}/iters_compared.csv"
     naive_ws_df = read_csv(naive_ws_path)
     last_column = naive_ws_df['fixed_ws']
     plt.plot(last_column[:eval_iters], 'm-.', label='naive warm start')
-    second_derivs_naive_ws = second_derivative_fn(np.log(last_column[:eval_iters]))
+    # second_derivs_naive_ws = second_derivative_fn(np.log(last_column[:eval_iters]))
     df_acc = update_acc(df_acc, accs, 'naive_ws', last_column[:eval_iters])
 
     '''
     pretraining
     '''
     if pretrain_datetime != '':
-        pretrain_path = f"{orig_cwd}/outputs/{example}/train_outputs/{pretrain_datetime}/iters_compared.csv"
+        pre_dt = pretrain_datetime
+        pretrain_path = f"{orig_cwd}/outputs/{example}/train_outputs/{pre_dt}/iters_compared.csv"
         pretrain_df = read_csv(pretrain_path)
         last_column = pretrain_df['pretrain']
         plt.plot(last_column[:eval_iters], 'r+', label='pretrain')
-    
+
     k_vals = np.zeros(len(datetimes))
     second_derivs = []
     for i in range(len(datetimes)):
-        datetime = datetimes[i]
-        path = f"{orig_cwd}/outputs/{example}/train_outputs/{datetime}/iters_compared.csv"
+        dt = datetimes[i]
+        path = f"{orig_cwd}/outputs/{example}/train_outputs/{dt}/iters_compared.csv"
         df = read_csv(path)
 
         '''
         for the fully trained models, track the k value
         - to do this, load the train_yaml file
         '''
-        train_yaml_filename = f"{orig_cwd}/outputs/{example}/train_outputs/{datetime}/.hydra/config.yaml"
+        train_yaml_filename = f"{orig_cwd}/outputs/{example}/train_outputs/{dt}/.hydra/config.yaml"
         with open(train_yaml_filename, "r") as stream:
             try:
                 out_dict = yaml.safe_load(stream)
@@ -221,7 +209,6 @@ def plot_eval_iters(example, cfg):
     plt.savefig('eval_iters.pdf', bbox_inches='tight')
     plt.clf()
 
-
     '''
     save the iterations required to reach a certain accuracy
     '''
@@ -233,7 +220,7 @@ def plot_eval_iters(example, cfg):
         if col != 'accuracies':
             val = 1 - df_acc[col] / no_learning_acc
             df_percent[col] = np.round(val, decimals=2)
-    
+
     df_percent.to_csv('iteration_reduction.csv')
 
     '''
@@ -248,70 +235,6 @@ def plot_eval_iters(example, cfg):
             df_acc_both[col + '_iters'] = df_acc[col]
             df_acc_both[col + '_red'] = df_percent[col]
     df_acc_both.to_csv('accuracies_reduction_both.csv')
-
-    '''
-    now plot the 2nd derivative of the evaluation iterations
-
-    plot 1: 2nd derivative of all runs
-    plot 2: train_unrolls vs max_curvature
-        for plot 2: ignore no-learning, pretraining
-    '''
-    # plot 1
-    plt.plot(second_derivs_no_learn[5:], label=f"no learning")
-    if pretrain_datetime != '':
-        plt.plot(second_derivs_pretrain, label=f"pretraining")
-
-    max_second_derivs = np.zeros(len(datetimes))
-    for i in range(len(datetimes)):
-        cutoff = 5
-        if k_vals[i] > 10:
-            cutoff = 15
-        max_second_derivs[i] = np.argmax(second_derivs[i][cutoff:]) + cutoff
-        plt.plot(second_derivs[i][5:], label=f"train $k={k_vals[i]}$")
-    
-    plt.legend()
-    plt.savefig('second_derivatives.pdf', bbox_inches='tight')
-    plt.clf()
-
-    # plot 2 
-    plt.scatter(k_vals, max_second_derivs)
-    xx = np.arange(k_vals.max())
-    plt.plot(xx)
-    plt.xlabel('train iterations')
-    plt.ylabel('maximum curvature iterations')
-    plt.xlim([0, k_vals.max()+5])
-    plt.ylim([0, k_vals.max()+5])
-    plt.legend()
-    plt.savefig('max_curvature.pdf', bbox_inches='tight')
-    plt.clf()
-    print('2nd deriv', second_derivs[-1])
-
-    # first deriv
-    data = last_column[:eval_iters]
-    log_data = np.log(data)
-    box = np.ones(20)/20
-    smooth_data = np.convolve(log_data, box, mode='valid')
-    deriv1 = np.diff(smooth_data)
-    deriv2 = np.diff(deriv1)
-    plt.plot(deriv1)
-    plt.plot(deriv2)
-    plt.savefig('first_deriv.pdf', bbox_inches='tight')
-    plt.clf()
-
-    plt.plot(smooth_data)
-    plt.savefig('smooth.pdf', bbox_inches='tight')
-    plt.clf()
-
-    smooth_deriv1 = np.convolve(deriv1, box, mode='valid')
-    smooth_deriv2 = np.convolve(deriv2, box, mode='valid')
-    plt.plot(smooth_deriv1)
-    plt.plot(smooth_deriv2)
-    plt.savefig('smooth_deriv_plots.pdf', bbox_inches='tight')
-    plt.clf()
-
-    '''
-    now write the iterations required to reach certain accuracy
-    '''
 
 
 def update_acc(df_acc, accs, col, losses):
@@ -353,4 +276,3 @@ if __name__ == '__main__':
         sys.argv[1] = base + 'all/plots/${now:%Y-%m-%d}/${now:%H-%M-%S}'
         sys.argv = [sys.argv[0], sys.argv[1]]
         plot_l4dc()
-

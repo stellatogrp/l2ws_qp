@@ -1,25 +1,19 @@
 import functools
 import hydra
 import cvxpy as cp
-from jax import linear_transpose
-import pandas as pd
-from pandas import read_csv
-from l2ws.scs_problem import SCSinstance, scs_jax, ruiz_equilibrate
+from l2ws.scs_problem import SCSinstance
 import numpy as np
-import pdb
 from l2ws.launcher import Workspace
-from scipy import sparse
 import jax.numpy as jnp
-from scipy.sparse import coo_matrix, bmat, csc_matrix
+from scipy.sparse import csc_matrix
 import jax.scipy as jsp
 import time
 import matplotlib.pyplot as plt
 import os
 import scs
 import logging
-from scipy import sparse
 import yaml
-from jax import jit, vmap
+from jax import vmap
 from utils.mpc_utils import static_canon
 log = logging.getLogger(__name__)
 
@@ -100,7 +94,7 @@ def setup_probs(cfg):
     cones_array_np = np.array(static_dict['cones_array'])
     cones_dict = dict(z=int(cones_array_np[0]), l=int(cones_array_np[1]))
 
-    matrix_invs = jnp.zeros(((N, m+n, m+n)))
+    # matrix_invs = jnp.zeros(((N, m+n, m+n)))
     factor1s = jnp.zeros(((N, m+n, m+n)))
     factor2s = jnp.zeros(((N, m+n, m+n)))
 
@@ -204,23 +198,23 @@ def setup_probs(cfg):
                   thetas=thetas,
                   x_stars=x_stars,
                   y_stars=y_stars,
-                #   matrix_invs=matrix_invs
+                  #   matrix_invs=matrix_invs
                   )
     elif cfg.linear_system_solve == 'factor':
         jnp.savez(output_filename,
                   thetas=thetas,
                   x_stars=x_stars,
                   y_stars=y_stars,
-                #   factors1s=factor1s,
-                #   factors2s=factor2s
+                  #   factors1s=factor1s,
+                  #   factors2s=factor2s
                   )
     # print(f"finished saving final data... took {save_time-t0}'", flush=True)
     save_time = time.time()
     log.info(f"finished saving final data... took {save_time-t0}'")
-    # plt.plot(x_stars[0, :])
-    # plt.plot(x_stars[1, :])
-    # plt.plot(x_stars[2, :])
-    # plt.show()
+    plt.plot(x_stars[0, :])
+    plt.plot(x_stars[1, :])
+    plt.plot(x_stars[2, :])
+    plt.show()
 
 
 def cvxpy_check(input_dict):
@@ -239,7 +233,6 @@ def cvxpy_check(input_dict):
     x = cp.Variable((T, nx))
     u = cp.Variable((T, nu))
     obj = 0
-    # pdb.set_trace()
     for i in range(T):
         full_ref = np.array(
             [ref_traj[i, 0], ref_traj[i, 1], 0, ref_traj[i, 2]])
@@ -262,16 +255,10 @@ def cvxpy_check(input_dict):
         constraints.append(x[i, :] == A @ x[i-1, :] + B @ u[i, :] + E * drift)
 
         # box delta control constraints
-        # constraints.append(cp.abs(u[i, 0]) <= box_control[0])
-        # constraints.append(cp.abs(u[i, 1]) <= box_control[1])
-        # constraints.append(cp.abs(u[i, 2]) <= box_control[2])
         constraints.append(cp.abs(u[i, :]) <= box_control)
 
     for i in range(T):
         # box control constraints
-        # constraints.append(cp.abs(u[i, 0]) <= box_control[0])
-        # constraints.append(cp.abs(u[i, 1]) <= box_control[1])
-        # constraints.append(cp.abs(u[i, 2]) <= box_control[2])
         constraints.append(cp.abs(u[i, :]) <= box_control)
 
     prob = cp.Problem(cp.Minimize(obj), constraints)
@@ -307,7 +294,8 @@ def run(run_cfg):
     datetime = run_cfg.data.datetime
     orig_cwd = hydra.utils.get_original_cwd()
     example = 'vehicle'
-    data_yaml_filename = f"{orig_cwd}/outputs/{example}/aggregate_outputs/{datetime}/data_setup_copied.yaml"
+    dt, ex = datetime, example
+    data_yaml_filename = f"{orig_cwd}/outputs/{ex}/aggregate_outputs/{dt}/data_setup_copied.yaml"
 
     # read the yaml file
     with open(data_yaml_filename, "r") as stream:
@@ -380,7 +368,7 @@ def sample_thetas(cfg):
     slip_box, yaw_box = const * cfg.slip_box_deg, const * cfg.yaw_box_deg
     roll_box = const * cfg.roll_box_deg
     roll_rate_box = const * cfg.roll_rate_box_deg
-    u_box = np.array([cfg.Fy_box, cfg.Mx_box, cfg.Mz_box])
+    # u_box = np.array([cfg.Fy_box, cfg.Mx_box, cfg.Mz_box])
     delta_box = const * cfg.delta0_box_deg
     delta_rate_box = const * cfg.delta_rate_box_deg
 
@@ -425,15 +413,11 @@ def sample_thetas(cfg):
     return thetas, specifics
 
 
-# def get_single_M_q(theta, dt, slip_pen, yaw_pen,
-#                    roll_pen, roll_rate_pen,
-#                    Fy_box, Mx_box, Mz_box,
-#                    with_states=True):
 def get_single_M_q(theta, M_tilde, q_tilde, T, m, n, dt, u_box, Fy_factor, Mx_factor, Mz_factor):
     '''
     first extract what theta means
     '''
-    nx, nu, state_box = 4, 3, np.inf
+    nx, nu = 4, 3
 
     vel, x0 = theta[0], theta[1:1+nx]
     u_prev = theta[1+nx:1+nx+nu]
@@ -449,19 +433,6 @@ def get_single_M_q(theta, M_tilde, q_tilde, T, m, n, dt, u_box, Fy_factor, Mx_fa
     '''
     second put the parameters into generic MPC form
     '''
-    # for mQ_vec, QT_vec, R_vec
-    # Q_vec = jnp.array([slip_pen, yaw_pen, roll_pen, roll_rate_pen])
-    # QT_vec = jnp.array([slip_pen, yaw_pen, roll_pen, roll_rate_pen])
-    # R_vec = jnp.array([Fy_box, Mx_box, Mz_box])
-    # static_dict = static_canon(T, nx, nu,
-    #                            state_box,
-    #                            control_box,
-    #                            Q_vec,
-    #                            QT_vec,
-    #                            R_vec,
-    #                            Ad=None,
-    #                            Bd=None,
-    #                            delta_control_box=None)
 
     P, A = M_tilde[:n, :n], -M_tilde[n:, :n]
     c, b = q_tilde[:n], q_tilde[n:]
@@ -477,7 +448,7 @@ def get_single_M_q(theta, M_tilde, q_tilde, T, m, n, dt, u_box, Fy_factor, Mx_fa
     b = b.at[:nx].set(b[:nx] + Ad @ x0)
 
     '''
-    u_prev comes in as well 
+    u_prev comes in as well
     (T * nx) linear dynamics constraints
     (2 * T * nu) box control constraints
     + T * nu lower control diff box constraints
@@ -494,14 +465,6 @@ def get_single_M_q(theta, M_tilde, q_tilde, T, m, n, dt, u_box, Fy_factor, Mx_fa
     ref_stacked = vstack(x_1, ..., x_T)
     '''
 
-    #P_state = P[:T*nx, :T*nx]
-    # c = c.at[:T*nx].set(-2 * P_state @ ref_traj)
-    # take only states 1, 2, 4
-    # Quadratic objective
-    # P_sparse = sparse.block_diag(
-    #     [sparse.kron(sparse.eye(T-1), Q), QT, sparse.kron(sparse.eye(T), R)],
-    #     format="csc",
-    # )
     P_state = P[:nx, :nx]
     PC = jnp.diag(jnp.array([P_state[0, 0], P_state[1, 1], 0, P_state[3, 3]]))
     PCref = jnp.kron(jnp.eye(T), PC)
@@ -511,7 +474,6 @@ def get_single_M_q(theta, M_tilde, q_tilde, T, m, n, dt, u_box, Fy_factor, Mx_fa
     ref_traj_full = ref_traj_full.at[:, :2].set(ref_traj_reshape[:, :2])
     ref_traj_full = ref_traj_full.at[:, 3].set(ref_traj_reshape[:, 3])
     ref_traj_full_vec = jnp.ravel(ref_traj_full)
-    #
     c = c.at[:T*nx].set(-1 * PCref @ ref_traj_full_vec)
 
     '''
@@ -536,11 +498,6 @@ def get_single_M_q(theta, M_tilde, q_tilde, T, m, n, dt, u_box, Fy_factor, Mx_fa
     M = M.at[:n, n:].set(A.T)
     q = jnp.concatenate([c / P_factor, b])
     return M, q
-
-
-def sample_parameters(N, T):
-    thetas = np.zeros(())
-    return Ad_tensor, Bd_tensor, thetas
 
 
 def get_ABE(v, dt, Fy_factor, Mx_factor, Mz_factor):

@@ -1,4 +1,3 @@
-from ast import Return
 import csv
 import os
 import matplotlib.pyplot as plt
@@ -7,13 +6,10 @@ import pandas as pd
 from l2ws.l2ws_model import L2WSmodel
 import jax.numpy as jnp
 import jax.scipy as jsp
-from jax import jit, vmap
+from jax import jit
 import hydra
-import pdb
-import time
 import jax
 from jax import random
-from l2ws.scs_problem import SCSinstance, scs_jax
 from scipy.spatial import distance_matrix
 plt.rcParams.update({
     "text.usetex": True,
@@ -45,7 +41,8 @@ class Workspace:
 
         # load the data from problem to problem
         orig_cwd = hydra.utils.get_original_cwd()
-        filename = f"{orig_cwd}/outputs/{example}/aggregate_outputs/{cfg.data.datetime}/data_setup_aggregate.npz"
+        dt = cfg.data.datetime
+        filename = f"{orig_cwd}/outputs/{example}/aggregate_outputs/{dt}/data_setup_aggregate.npz"
         jnp_load_obj = jnp.load(filename)
 
         '''
@@ -76,16 +73,14 @@ class Workspace:
         if static_flag:
             static_M = static_dict['M']
 
-            
-
-
             static_algo_factor = static_dict['algo_factor']
             cones_array = static_dict['cones_array']
             cones = dict(z=int(cones_array[0]), l=int(cones_array[1]))
 
             # call get_q_mat
             q_mat = get_M_q(thetas)
-            dynamic_algo_factors, M_tensor = None, None
+            # dynamic_algo_factors, M_tensor = None, None
+            M_tensor = None
             M_tensor_train, M_tensor_test = None, None
             matrix_invs_train, matrix_invs_test = None, None
 
@@ -117,11 +112,11 @@ class Workspace:
         # alternate -- load it if available (but this is memory-intensive)
         q_mat_train = q_mat[:N_train, :]
         q_mat_test = q_mat[N_train:N, :]
-        print('q_mat_train', q_mat_train[0,n:])
+        print('q_mat_train', q_mat_train[0, n:])
 
         self.M = static_M
 
-        zero_cone, pos_cone = cones['z'], cones['l']
+        zero_cone = cones['z']
 
         self.train_unrolls = cfg.train_unrolls
         eval_unrolls = cfg.train_unrolls
@@ -156,17 +151,6 @@ class Workspace:
             plt.plot(x_stars_train[i, :])
         plt.savefig('sample_problems.pdf')
         plt.clf()
-
-        ########### check
-        # P_jax = static_M[:n,:n]
-        # A_jax = -static_M[n:,:n]
-        # c_jax, b_jax = q_mat_train[0,:n], q_mat_train[0,n:]
-        # data = dict(P=P_jax, A=A_jax, b=b_jax, c=c_jax, cones=cones)
-        # data['x'] = x_stars[0, :]
-        # data['y'] = y_stars[0, :]
-        # x_jax, y_jax, s_jax = scs_jax(data, iters=1000)
-        # pdb.set_trace()
-        ########### end check
 
         input_dict = {'nn_cfg': self.nn_cfg,
                       'proj': proj,
@@ -210,16 +194,16 @@ class Workspace:
         if train:
             if self.l2ws_model.static_flag:
                 eval_out = self.l2ws_model.evaluate(self.eval_unrolls,
-                                                   self.l2ws_model.train_inputs[:num, :],
-                                                   self.l2ws_model.q_mat_train[:num, :],
-                                                   tag='train')
+                                                    self.l2ws_model.train_inputs[:num, :],
+                                                    self.l2ws_model.q_mat_train[:num, :],
+                                                    tag='train')
             else:
                 eval_out = self.l2ws_model.dynamic_eval(self.eval_unrolls,
-                                                   self.l2ws_model.train_inputs[:num, :],
-                                                   self.l2ws_model.matrix_invs_train[:num, :],
-                                                   self.l2ws_model.M_tensor_train[:num, :],
-                                                   self.l2ws_model.q_mat_train[:num, :],
-                                                   tag='train')
+                                                        self.l2ws_model.train_inputs[:num, :],
+                                                        self.l2ws_model.matrix_invs_train[:num, :],
+                                                        self.l2ws_model.M_tensor_train[:num, :],
+                                                        self.l2ws_model.q_mat_train[:num, :],
+                                                        tag='train')
         else:
             if fixed_ws:
                 '''
@@ -228,19 +212,20 @@ class Workspace:
                 '''
 
                 # compute distances to train inputs
-                distances = distance_matrix(np.array(self.l2ws_model.test_inputs[:num,:]), np.array(self.l2ws_model.train_inputs))
+                distances = distance_matrix(
+                    np.array(self.l2ws_model.test_inputs[:num, :]),
+                    np.array(self.l2ws_model.train_inputs))
                 print('distances', distances)
                 indices = np.argmin(distances, axis=1)
                 print('indices', indices)
                 best_val = np.min(distances, axis=1)
                 print('best val', best_val)
                 plt.plot(indices)
-                plt.savefig(f"indices_plot.pdf", bbox_inches='tight')
+                plt.savefig("indices_plot.pdf", bbox_inches='tight')
                 plt.clf()
-                
+
                 inputs = self.l2ws_model.w_stars_train[indices, :]
 
-                
             elif col == 'no_train':
                 # random init with neural network
                 # _, predict_size = self.l2ws_model.w_stars_test.shape
@@ -248,26 +233,27 @@ class Workspace:
                 # inputs = jnp.array(random_start)
                 # fixed_ws = True
 
-                # 
+                #
                 inputs = self.l2ws_model.test_inputs[:num, :]
                 fixed_ws = False
             else:
                 inputs = self.l2ws_model.test_inputs[:num, :]
             if self.l2ws_model.static_flag:
                 eval_out = self.l2ws_model.evaluate(self.eval_unrolls,
-                                               inputs,
-                                               self.l2ws_model.q_mat_test[:num, :],
-                                               tag='test',
-                                               fixed_ws=fixed_ws)
+                                                    inputs,
+                                                    self.l2ws_model.q_mat_test[:num, :],
+                                                    tag='test',
+                                                    fixed_ws=fixed_ws)
             else:
+                mat_invs = self.l2ws_model.matrix_invs_test[:num, :, :]
                 eval_out = self.l2ws_model.dynamic_eval(self.eval_unrolls,
-                                                inputs,
-                                                self.l2ws_model.matrix_invs_test[:num, :, :],
-                                                self.l2ws_model.M_tensor_test[:num, :, :],
-                                                self.l2ws_model.q_mat_test[:num, :],
-                                                tag='test',
-                                                fixed_ws=fixed_ws)
-                
+                                                        inputs,
+                                                        mat_invs,
+                                                        self.l2ws_model.M_tensor_test[:num, :, :],
+                                                        self.l2ws_model.q_mat_test[:num, :],
+                                                        tag='test',
+                                                        fixed_ws=fixed_ws)
+
         loss_train, out_train, train_time = eval_out
         iter_losses_mean = out_train[2].mean(axis=0)
         if not os.path.exists('losses_over_examples'):
@@ -279,13 +265,13 @@ class Workspace:
 
         primal_residuals = out_train[3].mean(axis=0)
         dual_residuals = out_train[4].mean(axis=0)
-        print('after iterations z', out_train[0][1][0,:])
+        print('after iterations z', out_train[0][1][0, :])
         print('truth z', self.l2ws_model.w_stars_test[0, :])
-        print('after iterations z', out_train[0][1][1,:])
+        print('after iterations z', out_train[0][1][1, :])
         print('truth z', self.l2ws_model.w_stars_test[1, :])
         # plt.plot(out_train[0][1][0,:], label='after iters')
         # plt.plot(self.l2ws_model.w_stars_test[0, :], label='truth')
-        plt.plot(self.l2ws_model.w_stars_test[0, :] - out_train[0][1][0,:], label='truth')
+        plt.plot(self.l2ws_model.w_stars_test[0, :] - out_train[0][1][0, :], label='truth')
         plt.savefig('debug.pdf', bbox_inches='tight')
         plt.clf()
 
@@ -362,30 +348,14 @@ class Workspace:
         '''
         no learning evaluation
         '''
-        out_train_start = self.evaluate_iters(
+        self.evaluate_iters(
             self.num_samples, 'no_train', train=False, plot_pretrain=False)
 
         '''
         fixed ws evaluation
         '''
-        out_train_fixed_ws = self.evaluate_iters(
+        self.evaluate_iters(
             self.num_samples, 'fixed_ws', train=False, plot_pretrain=False)
-        
-
-        # print("Pretraining...")
-        # self.df_pretrain = pd.DataFrame(
-        #     columns=['pretrain_loss', 'pretrain_test_loss'])
-        # train_pretrain_losses, test_pretrain_losses = self.l2ws_model.pretrain(self.pretrain_cfg.pretrain_iters,
-        #                                                                       stepsize=self.pretrain_cfg.pretrain_stepsize,
-        #                                                                       df_pretrain=self.df_pretrain)
-        # plt.plot(train_pretrain_losses, label='train')
-        # plt.plot(test_pretrain_losses, label='test')
-        # plt.yscale('log')
-        # plt.xlabel('pretrain iterations')
-        # plt.ylabel('pretrain loss')
-        # plt.legend()
-        # plt.savefig('pretrain_losses.pdf')
-        # plt.clf()
 
         self.logf = open('train_results.csv', 'a')
         fieldnames = ['iter', 'train_loss', 'moving_avg_train', 'test_loss']
@@ -393,7 +363,7 @@ class Workspace:
         if os.stat('train_results.csv').st_size == 0:
             self.writer.writeheader()
 
-        out_trains = []
+        # out_trains = []
 
         '''
         NEW WAY - train_batch - better for saving
@@ -418,7 +388,7 @@ class Workspace:
 
                 curr_iter += 1
             if epoch % self.eval_every_x_epochs == 0:
-                out_train = self.evaluate_iters(
+                self.evaluate_iters(
                     self.num_samples, f"train_iter_{curr_iter}", train=False)
                 # out_trains.append(out_train)
             self.l2ws_model.epoch += 1
