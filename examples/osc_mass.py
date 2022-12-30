@@ -1,19 +1,22 @@
 import functools
-import hydra
-from l2ws.scs_problem import SCSinstance
-import numpy as np
-from l2ws.launcher import Workspace
-from scipy import sparse
-import jax.numpy as jnp
-from scipy.sparse import csc_matrix
-import jax.scipy as jsp
-import time
-import matplotlib.pyplot as plt
-import os
-import scs
 import logging
+import os
+import time
+
+import hydra
+import jax.numpy as jnp
+import jax.scipy as jsp
+import matplotlib.pyplot as plt
+import numpy as np
+import scs
 import yaml
 from jax import vmap
+from scipy import sparse
+from scipy.sparse import csc_matrix
+
+from l2ws.launcher import Workspace
+from l2ws.scs_problem import SCSinstance
+
 plt.rcParams.update({
     "text.usetex": True,
     "font.family": "serif",

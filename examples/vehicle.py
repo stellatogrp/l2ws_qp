@@ -1,20 +1,23 @@
 import functools
-import hydra
-import cvxpy as cp
-from l2ws.scs_problem import SCSinstance
-import numpy as np
-from l2ws.launcher import Workspace
-import jax.numpy as jnp
-from scipy.sparse import csc_matrix
-import jax.scipy as jsp
-import time
-import matplotlib.pyplot as plt
-import os
-import scs
 import logging
+import os
+import time
+
+import cvxpy as cp
+import hydra
+import jax.numpy as jnp
+import jax.scipy as jsp
+import matplotlib.pyplot as plt
+import numpy as np
+import scs
 import yaml
 from jax import vmap
+from scipy.sparse import csc_matrix
+
+from l2ws.launcher import Workspace
+from l2ws.scs_problem import SCSinstance
 from utils.mpc_utils import static_canon
+
 log = logging.getLogger(__name__)
 
 
