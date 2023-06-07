@@ -7,8 +7,6 @@
 absl-py==1.3.0
     # via
     #   chex
-    #   jax
-    #   jaxlib
     #   jaxopt
     #   optax
 antlr4-python3-runtime==4.9.3
@@ -35,8 +33,6 @@ dm-tree==0.1.7
     # via chex
 ecos==2.0.10
     # via cvxpy
-flatbuffers==2.0.7
-    # via jaxlib
 fonttools==4.38.0
     # via matplotlib
 get-all-tickers==1.8
@@ -71,6 +67,10 @@ matplotlib==3.6.2
     # via
     #   -r requirements.in
     #   jaxopt
+ml-dtypes==0.2.0
+    # via
+    #   jax
+    #   jaxlib
 more-itertools==9.0.0
     # via quandl
 multitasking==0.0.11
@@ -86,6 +86,7 @@ numpy==1.23.5
     #   jaxlib
     #   jaxopt
     #   matplotlib
+    #   ml-dtypes
     #   opt-einsum
     #   optax
     #   osqp
@@ -167,9 +168,7 @@ threadpoolctl==3.1.0
 toolz==0.12.0
     # via chex
 typing-extensions==4.4.0
-    # via
-    #   jax
-    #   optax
+    # via optax
 urllib3==1.26.13
     # via requests
 yahoofinancials==1.6

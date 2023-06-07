@@ -2,16 +2,18 @@ import pdb
 
 import numpy as np
 import pandas as pd
+import sys
 
 
-def main():
-    nasdaq()
-    # yahoo()
+def main(data):
+    nasdaq(data)
 
 
-def nasdaq():
-    stacked_filename = 'data/portfolio_data/WIKI_prices_all.csv'
-    # stacked_filename = 'data/portfolio_data/EOD.csv'
+def nasdaq(data):
+    if data == 'wiki':
+        stacked_filename = 'data/portfolio_data/WIKI_prices_all.csv'
+    elif data == 'eod':
+        stacked_filename = 'data/portfolio_data/EOD.csv'
     stacked_df = pd.read_csv(stacked_filename)
 
     # create a new dataframe with 'date' column as index
@@ -26,9 +28,10 @@ def nasdaq():
     num_nan = clean_data.isna().sum(axis=0)
     # close_data = clean_data.dropna(axis=1, how='any')
     # pdb.set_trace()
-    small_nan_data = num_nan < 10
-    indices = small_nan_data.to_numpy()
-    close_data = clean_data.iloc[:, indices]
+    # small_nan_data = num_nan < 5
+    # indices = small_nan_data.to_numpy()
+    # close_data = clean_data.iloc[:, indices]
+    close_data = clean_data
 
     # now get largest 3000 assets
     sums = close_data.min(axis=0).to_numpy()
@@ -50,7 +53,7 @@ def nasdaq():
     ret = ret.fillna(ret.mean())
 
     short_ret = ret.iloc[:, :3000]
-    # short_ret = short_ret.clip(lower=-.5, upper=.5)
+    # short_ret = short_ret.clip(lower=-.2, upper=.2)
     # pdb.set_trace()
     short_ret.to_csv('data/portfolio_data/returns.csv')
 
@@ -62,17 +65,21 @@ def nasdaq():
 
     # get factor model
     U, S, VT = np.linalg.svd(cov_np)
-    pdb.set_trace()
+    # pdb.set_trace()
     factor = 15
     S_factor = np.diag(S[:factor])
     factor_cov = U[:, :factor] @ S_factor @ VT[:factor, :]
 
     # cov_np[cov_np > .001] = .001
     # cov_np[cov_np < -.001] = -.001
-    filename = 'data/portfolio_data/eod_ret_cov.npz'
-    pdb.set_trace()
+    if data == 'wiki':
+        filename = 'data/portfolio_data/wiki_ret_cov.npz'
+    elif data == 'eod':
+        filename = 'data/portfolio_data/eod_ret_cov.npz'
+    # pdb.set_trace()
     np.savez(filename, ret=short_ret_np, cov=factor_cov)
 
 
 if __name__ == '__main__':
-    main()
+    data = sys.argv[1]
+    main(data)

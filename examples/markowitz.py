@@ -101,10 +101,11 @@ def setup_probs(setup_cfg):
     orig_cwd = hydra.utils.get_original_cwd()
     if cfg.data == 'yahoo':
         ret_cov_np = f"{orig_cwd}/data/portfolio_data/yahoo_ret_cov.npz"
-    elif cfg.data == 'nasdaq':
-        ret_cov_np = f"{orig_cwd}/data/portfolio_data/ret_cov.npz"
+    elif cfg.data == 'wiki':
+        ret_cov_np = f"{orig_cwd}/data/portfolio_data/wiki_ret_cov.npz"
     elif cfg.data == 'eod':
         ret_cov_np = f"{orig_cwd}/data/portfolio_data/eod_ret_cov_factor.npz"
+
 
     ret_cov_loaded = np.load(ret_cov_np)
     # Sigma = ret_cov_loaded['cov'] + np.eye(a) * cfg.idio_risk
@@ -158,12 +159,16 @@ def setup_probs(setup_cfg):
     # pdb.set_trace()
     mu_mat = np.zeros((N, a))
     T = ret.shape[0]
-    noise = np.sqrt(.02) * np.random.normal(size=(N, a))
+    # noise_var = cfg.get('noise_var', .02)
+    noise_var = cfg['noise_var']
+    noise = np.sqrt(noise_var) * np.random.normal(size=(N, a))
 
     for i in range(N):
         log.info(f"solving problem number {i}")
         time_index = i % T
         mu_mat[i, :] = cfg.scale_factor * alpha * (ret[time_index, :] + noise[i, :])
+        # import pdb
+        # pdb.set_trace()
         # mu_mat[i, :] = clipped_ret_mean * \
         #     (1 + std_mult*np.random.normal(size=(a))
         #      ) + std_mult *np.random.normal(size=(a))
@@ -243,10 +248,12 @@ def static_canon(data, a, idio_risk, scale_factor):
     orig_cwd = hydra.utils.get_original_cwd()
     if data == 'yahoo':
         ret_cov_np = f"{orig_cwd}/data/portfolio_data/yahoo_ret_cov.npz"
-    elif data == 'nasdaq':
-        ret_cov_np = f"{orig_cwd}/data/portfolio_data/ret_cov.npz"
+    elif data == 'wiki':
+        ret_cov_np = f"{orig_cwd}/data/portfolio_data/wiki_ret_cov.npz"
     elif data == 'eod':
         ret_cov_np = f"{orig_cwd}/data/portfolio_data/eod_ret_cov_factor.npz"
+    # import pdb
+    # pdb.set_trace()
 
     ret_cov_loaded = np.load(ret_cov_np)
     Sigma = ret_cov_loaded['cov'][:a, :a] + idio_risk * np.eye(a)

@@ -5,8 +5,8 @@ matplotlib
 sklearn
 scikit-learn
 pandas
-jax==0.3.1
-jaxlib==0.3.0
+jax==0.4.8
+jaxlib==0.4.7
 jaxopt==0.4
 hydra-core
 optax==0.1.1

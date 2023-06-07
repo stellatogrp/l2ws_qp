@@ -136,3 +136,4 @@ outputs/
 data/
 outputs
 .vscode/
+env_old/
