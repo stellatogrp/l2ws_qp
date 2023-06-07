@@ -115,10 +115,10 @@ class L2WSmodel(object):
 
         if self.nn_cfg.method == 'adam':
             self.optimizer = OptaxSolver(opt=optax.adam(
-                self.lr), fun=self.loss_fn_train, has_aux=True)
+                self.lr), fun=self.loss_fn_train, has_aux=False)
         elif self.nn_cfg.method == 'sgd':
             self.optimizer = OptaxSolver(opt=optax.sgd(
-                self.lr), fun=self.loss_fn_train, has_aux=True)
+                self.lr), fun=self.loss_fn_train, has_aux=False)
 
         self.input_dict = dict
         self.tr_losses = None
@@ -414,6 +414,7 @@ def create_loss_fn(input_dict):
                 losses, iter_losses, out = batch_predict(
                     params, inputs, q, iters)
                 loss_out = out, losses, iter_losses
+                return losses.mean()
 
             else:
                 losses, iter_losses, primal_residuals, dual_residuals, out = batch_predict(
@@ -431,6 +432,7 @@ def create_loss_fn(input_dict):
                 losses, iter_losses, out = batch_predict(
                     params, inputs, q, iters, factor, M)
                 loss_out = out, losses, iter_losses
+                return losses.mean()
             else:
                 losses, iter_losses, primal_residuals, dual_residuals, out = batch_predict(
                     params, inputs, q, iters, factor, M)
