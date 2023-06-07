@@ -10,8 +10,8 @@ def main():
 
 
 def nasdaq():
-    # stacked_filename = 'data/portfolio_data/WIKI_prices_all.csv'
-    stacked_filename = 'data/portfolio_data/EOD.csv'
+    stacked_filename = 'data/portfolio_data/WIKI_prices_all.csv'
+    # stacked_filename = 'data/portfolio_data/EOD.csv'
     stacked_df = pd.read_csv(stacked_filename)
 
     # create a new dataframe with 'date' column as index
