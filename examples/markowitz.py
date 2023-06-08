@@ -106,7 +106,6 @@ def setup_probs(setup_cfg):
     elif cfg.data == 'eod':
         ret_cov_np = f"{orig_cwd}/data/portfolio_data/eod_ret_cov_factor.npz"
 
-
     ret_cov_loaded = np.load(ret_cov_np)
     # Sigma = ret_cov_loaded['cov'] + np.eye(a) * cfg.idio_risk
     ret = ret_cov_loaded['ret'][1:, :a]
