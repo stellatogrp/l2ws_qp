@@ -40,25 +40,22 @@ Experiments can from the root folder using the commands below.
 
 Oscillating masses:
 ```
-python l2ws_setup.py osc_mass local
+python l2ws_setup_script.py osc_mass local
 python aggregate_slurm_runs_script.py osc_mass local
-python l2ws_train.py osc_mass local
+python l2ws_train_script.py osc_mass local
 python plot_script.py osc_mass local
 ```
 Vehicle dynamics:
 ```
-python l2ws_setup.py vehicle local
+python l2ws_setup_script.py vehicle local
 python aggregate_slurm_runs_script.py vehicle local
-python l2ws_train.py vehicle local
+python l2ws_train_script.py vehicle local
 python plot_script.py vehicle local
 ```
 Markowitz:
-To get the data, from NASDAQ you must create an account with NASDAQ (https://data.nasdaq.com/) and download the data with 
-```
-https://data.nasdaq.com/tables/WIKI-PRICES/export?api_key={INSERT_API_KEY}[…]date&qopts.columns%5B%5D=ticker&qopts.columns%5B%5D=adj_close
-```
+To get the data, from NASDAQ you must create an account with NASDAQ (https://data.nasdaq.com/) and download the EOD dataset.
 
-We use the WIKIPRICES dataset found at https://data.nasdaq.com/databases/WIKIP/documentation. To process the data run
+To process the data run
 ```
 python utils/portfolio_utils.py
 ```

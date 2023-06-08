@@ -28,9 +28,9 @@ def nasdaq(data):
     num_nan = clean_data.isna().sum(axis=0)
     # close_data = clean_data.dropna(axis=1, how='any')
     # pdb.set_trace()
-    # small_nan_data = num_nan < 5
-    # indices = small_nan_data.to_numpy()
-    # close_data = clean_data.iloc[:, indices]
+    small_nan_data = num_nan < 10
+    indices = small_nan_data.to_numpy()
+    close_data = clean_data.iloc[:, indices]
     close_data = clean_data
 
     # now get largest 3000 assets
@@ -53,7 +53,7 @@ def nasdaq(data):
     ret = ret.fillna(ret.mean())
 
     short_ret = ret.iloc[:, :3000]
-    # short_ret = short_ret.clip(lower=-.2, upper=.2)
+    # short_ret = short_ret.clip(lower=-1, upper=1)
     # pdb.set_trace()
     short_ret.to_csv('data/portfolio_data/returns.csv')
 
@@ -76,7 +76,7 @@ def nasdaq(data):
         filename = 'data/portfolio_data/wiki_ret_cov.npz'
     elif data == 'eod':
         filename = 'data/portfolio_data/eod_ret_cov.npz'
-    # pdb.set_trace()
+    pdb.set_trace()
     np.savez(filename, ret=short_ret_np, cov=factor_cov)
 
 
