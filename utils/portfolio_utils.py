@@ -1,5 +1,3 @@
-import pdb
-
 import numpy as np
 import pandas as pd
 import sys
@@ -76,7 +74,7 @@ def nasdaq(data):
         filename = 'data/portfolio_data/wiki_ret_cov.npz'
     elif data == 'eod':
         filename = 'data/portfolio_data/eod_ret_cov.npz'
-    pdb.set_trace()
+
     np.savez(filename, ret=short_ret_np, cov=factor_cov)
 
 
